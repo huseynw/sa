@@ -1,0 +1,3 @@
+# Paste your Netscape format YouTube cookies here.
+# Example:
+# .youtube.com	TRUE	/	TRUE	1778939223	SID	xxxxxx

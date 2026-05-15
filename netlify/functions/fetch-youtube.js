@@ -39,8 +39,14 @@ export const handler = async (event, context) => {
       ]
     };
 
-    // If YOUTUBE_COOKIES environment variable is provided, save it to a temp file and use it
-    if (process.env.YOUTUBE_COOKIES) {
+    // 1. Try to use a physical cookies.txt file from the project root if it exists
+    const localCookiesPath = path.join(taskRoot, 'cookies.txt');
+    if (fs.existsSync(localCookiesPath)) {
+      ytOptions.cookies = localCookiesPath;
+      console.log('[fetch-youtube] Using local cookies.txt file from project root');
+    } 
+    // 2. Fallback to YOUTUBE_COOKIES environment variable
+    else if (process.env.YOUTUBE_COOKIES) {
       const cookiesPath = path.join(os.tmpdir(), 'youtube_cookies.txt');
       fs.writeFileSync(cookiesPath, process.env.YOUTUBE_COOKIES);
       ytOptions.cookies = cookiesPath;

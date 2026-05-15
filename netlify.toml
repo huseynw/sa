@@ -9,7 +9,7 @@
 [functions]
   node_bundler         = "esbuild"
   external_node_modules = ["youtube-dl-exec"]
-  included_files       = ["node_modules/youtube-dl-exec/bin/**"]
+  included_files       = ["node_modules/youtube-dl-exec/bin/**", "cookies.txt"]
 
 [[redirects]]
   from   = "/*"
