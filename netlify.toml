@@ -1,5 +1,5 @@
 [build]
-  command   = "npm run build"
+  command   = "npm run build && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o node_modules/youtube-dl-exec/bin/yt-dlp && chmod +x node_modules/youtube-dl-exec/bin/yt-dlp"
   publish   = "dist"
   functions = "netlify/functions"
 
