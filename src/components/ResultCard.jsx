@@ -96,8 +96,9 @@ const ResultCard = ({ result, url }) => {
       let dlExt = audioOnly ? 'mp3' : 'mp4';
 
       if (!dlUrl) {
-        // Use RapidAPI (fetch-youtube) for YouTube and yt-dlp for TikTok MP3 requests.
-        const useYtDlp = platform === 'youtube' || (platform === 'tiktok' && audioOnly);
+        // Use RapidAPI (fetch-youtube) for YouTube and yt-dlp for ALL TikTok requests.
+        // Cobalt on Render is failing with error.api.fetch.fail for TikTok.
+        const useYtDlp = platform === 'youtube' || platform === 'tiktok';
         const fetchEndpoint = useYtDlp
           ? '/.netlify/functions/fetch-youtube'
           : '/.netlify/functions/fetch-info';
@@ -131,6 +132,8 @@ const ResultCard = ({ result, url }) => {
           a.href = dlUrl.includes('#') ? dlUrl : `${dlUrl}#${safeName}`;
           a.download = safeName;
           a.target = '_blank';
+          a.rel = 'noreferrer';
+          a.referrerPolicy = 'no-referrer'; // This bypasses TikTok CDN 403 Forbidden!
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
