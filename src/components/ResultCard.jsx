@@ -96,30 +96,84 @@ const ResultCard = ({ result, url }) => {
       let dlExt = audioOnly ? 'mp3' : 'mp4';
 
       if (!dlUrl) {
-        // Use RapidAPI (fetch-youtube) for YouTube and yt-dlp for ALL TikTok requests.
-        // Cobalt on Render is failing with error.api.fetch.fail for TikTok.
-        const useYtDlp = platform === 'youtube' || platform === 'tiktok';
-        const fetchEndpoint = useYtDlp
-          ? '/.netlify/functions/fetch-youtube'
-          : '/.netlify/functions/fetch-info';
+        if (platform === 'youtube') {
+          // ─── CLIENT-SIDE YOUTUBE via Invidious ───
+          // Lambda's AWS IPs are blocked by Invidious. Browser residential IP works fine.
+          const videoId = extractYtId(url);
+          if (!videoId) throw new Error('Yanlış YouTube URL-i');
 
-        const res = await fetch(fetchEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, isAudioOnly: audioOnly, quality: selectedQ, isMuted }),
-        });
-        const data = await res.json();
+          const INVIDIOUS = [
+            'https://inv.thepixora.com',
+            'https://invidious.adminforge.de',
+            'https://invidious.fdn.fr',
+            'https://iv.datura.network',
+            'https://invidious.privacydev.net',
+            'https://inv.nadeko.net',
+            'https://invidious.nerdvpn.de',
+            'https://yt.artemislena.eu',
+            'https://invidious.flokinet.to',
+            'https://inv.clip.bike',
+            'https://inv.vern.cc',
+            'https://invidious.lunar.icu',
+            'https://yt.cdaut.de',
+            'https://invidious.tiekoetter.com',
+          ];
 
-        if (data.error) throw new Error(data.details || data.error);
-        if (data.status === 'error') throw new Error(data.text || data.error?.code || 'Naməlum xəta');
+          const tryInv = async (base) => {
+            const r = await fetch(
+              `${base}/api/v1/videos/${videoId}?fields=title,formatStreams,adaptiveFormats`,
+              { signal: AbortSignal.timeout(6000) }
+            );
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const d = await r.json();
+            if (!d.title) throw new Error('no title');
+            return { d, base };
+          };
 
-        if (['stream', 'redirect', 'tunnel', 'youtube_ready'].includes(data.status)) {
-          dlUrl = data.url;
-          if (data.ext) dlExt = data.ext;
-        } else if (data.status === 'picker') {
-          alert('Gallery üçün əvvəlcə şəkilləri seçin.');
-          setDownloading(false);
-          return;
+          const { d: invData, base: invBase } = await Promise.any(INVIDIOUS.map(tryInv));
+          console.log('[YouTube] Invidious:', invBase);
+
+          if (audioOnly) {
+            const fmt = (invData.adaptiveFormats || []).find(f => f.type?.includes('audio/mp4'))
+              || (invData.adaptiveFormats || [])[0];
+            if (!fmt) throw new Error('Audio format tapılmadı');
+            const qs = new URL(fmt.url).search;
+            dlUrl = `${invBase}/videoplayback${qs}`;
+            dlExt = 'm4a';
+          } else {
+            const fmt = (invData.formatStreams || []).find(f => f.itag === '18')
+              || invData.formatStreams?.[0];
+            if (!fmt) throw new Error('Video format tapılmadı');
+            const qs = new URL(fmt.url).search;
+            dlUrl = `${invBase}/videoplayback${qs}`;
+            dlExt = 'mp4';
+          }
+
+        } else {
+          // ─── TIKTOK + OTHER platforms via Lambda (fetch-youtube / fetch-info) ───
+          const useLambda = platform === 'tiktok';
+          const fetchEndpoint = useLambda
+            ? '/.netlify/functions/fetch-youtube'
+            : '/.netlify/functions/fetch-info';
+
+          const res = await fetch(fetchEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, isAudioOnly: audioOnly, quality: selectedQ, isMuted }),
+          });
+          const data = await res.json();
+
+          if (data.error) throw new Error(data.details || data.error);
+          if (data.status === 'error') throw new Error(data.text || data.error?.code || 'Naməlum xəta');
+
+          if (['stream', 'redirect', 'tunnel', 'youtube_ready'].includes(data.status)) {
+            dlUrl = data.url;
+            if (data.ext) dlExt = data.ext;
+          } else if (data.status === 'picker') {
+            alert('Gallery üçün əvvəlcə şəkilləri seçin.');
+            setDownloading(false);
+            return;
+          }
         }
       }
 
