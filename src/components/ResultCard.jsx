@@ -126,21 +126,33 @@ const ResultCard = ({ result, url }) => {
       if (dlUrl) {
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt')) {
+        if (platform === 'youtube' && dlUrl.includes('googlevideo.com')) {
+          // RapidAPI YouTube URLs are IP-locked to their servers.
+          // XHR fails with CORS. We use a direct anchor-tag to trigger the download.
+          const a = document.createElement('a');
+          a.href = dlUrl;
+          a.download = safeName;
+          a.target = '_blank';
+          a.rel = 'noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setDownloading(false);
+        } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
           // Raw TikTok CDN links often block XHR via CORS. Opening them directly works!
           const a = document.createElement('a');
           a.href = dlUrl.includes('#') ? dlUrl : `${dlUrl}#${safeName}`;
           a.download = safeName;
           a.target = '_blank';
           a.rel = 'noreferrer';
-          a.referrerPolicy = 'no-referrer'; // This bypasses TikTok CDN 403 Forbidden!
+          a.referrerPolicy = 'no-referrer';
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
           setDownloading(false);
         } else {
           try {
-            // Cobalt proxy URLs and other public URLs support CORS, so XHR works
+            // Cobalt proxy URLs and tikwm proxy URLs support CORS, so XHR works
             await downloadFile(dlUrl, safeName, (prog) => setProgressData(prog));
           } catch (downloadErr) {
             console.warn('XHR download failed, falling back to direct link:', downloadErr);

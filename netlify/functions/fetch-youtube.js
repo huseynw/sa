@@ -135,19 +135,19 @@ export const handler = async (event, context) => {
     const videoTitle = data.title || 'video';
     const safeName = videoTitle.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'youtube_video';
     const ext = targetFormat.extension || 'mp4';
-    const filename = isAudioOnly ? `HUSEVN DOWNLOADER - ${safeName}.mp3` : `HUSEVN DOWNLOADER - ${safeName}.${ext}`;
 
-    // Return a URL to our Netlify proxy which will stream it from the server's IP.
-    const proxyUrl = `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(targetFormat.url)}&filename=${encodeURIComponent(filename)}&audio=${isAudioOnly}`;
-
+    // IMPORTANT: RapidAPI YouTube URLs are IP-locked to RapidAPI's own servers.
+    // Proxying them via Netlify Lambda causes 403 because Netlify has a different IP.
+    // Returning the direct URL works because the BROWSER downloads directly from
+    // RapidAPI's server using the same session/IP that fetched it.
     return {
       statusCode: 200,
       headers: { "Access-Control-Allow-Origin": "*" },
       body: JSON.stringify({
         title: videoTitle,
-        url: proxyUrl,
+        url: targetFormat.url,
         format: targetFormat.quality || null,
-        ext: ext,
+        ext: isAudioOnly ? 'm4a' : ext,
         filesize: targetFormat.size || null,
         status: "redirect"
       }),
