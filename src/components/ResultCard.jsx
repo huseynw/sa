@@ -133,27 +133,23 @@ const ResultCard = ({ result, url }) => {
           const { d: invData, base: invBase } = await Promise.any(INVIDIOUS.map(tryInv));
           console.log('[YouTube] Invidious:', invBase);
 
+          const invTitle = invData.title?.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'youtube';
+
           if (audioOnly) {
             const fmt = (invData.adaptiveFormats || []).find(f => f.type?.includes('audio/mp4'))
               || (invData.adaptiveFormats || [])[0];
             if (!fmt) throw new Error('Audio format tapılmadı');
             const qs = new URL(fmt.url).search;
-            const invUrl = `${invBase}/videoplayback${qs}`;
-            // Route through our proxy for CORS-safe XHR download + correct filename
-            const title = invData.title?.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'youtube_audio';
-            const filename = `HUSEVN DOWNLOADER - ${title}.mp3`;
-            dlUrl = `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(invUrl)}&filename=${encodeURIComponent(filename)}&audio=true`;
+            // Direct Invidious URL — no Lambda proxy (Lambda is blocked by Invidious)
+            dlUrl = `${invBase}/videoplayback${qs}`;
             dlExt = 'mp3';
           } else {
             const fmt = (invData.formatStreams || []).find(f => f.itag === '18')
               || invData.formatStreams?.[0];
             if (!fmt) throw new Error('Video format tapılmadı');
             const qs = new URL(fmt.url).search;
-            const invUrl = `${invBase}/videoplayback${qs}`;
-            // Route through our proxy for CORS-safe XHR download + correct filename
-            const title = invData.title?.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'youtube_video';
-            const filename = `HUSEVN DOWNLOADER - ${title}.mp4`;
-            dlUrl = `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(invUrl)}&filename=${encodeURIComponent(filename)}&audio=false`;
+            // Direct Invidious URL — no Lambda proxy (Lambda is blocked by Invidious)
+            dlUrl = `${invBase}/videoplayback${qs}`;
             dlExt = 'mp4';
           }
 
@@ -188,7 +184,43 @@ const ResultCard = ({ result, url }) => {
       if (dlUrl) {
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
+        if (platform === 'youtube' && dlUrl.includes('/videoplayback')) {
+          // ─── Direct Invidious blob download (no Lambda proxy needed) ───
+          // Invidious `/videoplayback` is accessible from browser residential IPs.
+          // Lambda is blocked, so we download entirely client-side via fetch → blob → anchor.
+          try {
+            const response = await fetch(dlUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const contentLength = parseInt(response.headers.get('content-length') || '0');
+            const reader = response.body.getReader();
+            const chunks = [];
+            let loaded = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              loaded += value.length;
+              if (contentLength > 0) {
+                setProgressData({ percent: Math.round(loaded / contentLength * 100), speed: 0 });
+              }
+            }
+            const blob = new Blob(chunks, { type: audioOnly ? 'audio/mp4' : 'video/mp4' });
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = safeName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+          } catch (ytErr) {
+            // CORS blocked — open directly in new tab (user can right-click → save as)
+            console.warn('Direct Invidious fetch failed, opening in new tab:', ytErr.message);
+            window.open(dlUrl, '_blank', 'noreferrer');
+          }
+          setDownloading(false);
+
+        } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
           // Raw TikTok CDN links often block XHR via CORS. Opening them directly works!
           const a = document.createElement('a');
           a.href = dlUrl.includes('#') ? dlUrl : `${dlUrl}#${safeName}`;
