@@ -32,6 +32,8 @@ export const handler = async (event, context) => {
       dumpSingleJson: true,
       noCheckCertificates: true,
       noWarnings: true,
+      forceIpv4: true, // Force IPv4 (YouTube often blocks IPv6 from AWS datacenters)
+      ignoreNoFormatsError: true, // Output JSON even if no formats are found
       addHeader: [
         'referer:youtube.com',
         'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
