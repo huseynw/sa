@@ -96,12 +96,10 @@ const ResultCard = ({ result, url }) => {
       let dlExt = audioOnly ? 'mp3' : 'mp4';
 
       if (!dlUrl) {
-        // Use yt-dlp (fetch-youtube) ONLY for YouTube requests.
-        // Cobalt handles TikTok audio extraction internally much better.
-        const useYtDlp = platform === 'youtube';
-        const fetchEndpoint = useYtDlp
-          ? '/.netlify/functions/fetch-youtube'
-          : '/.netlify/functions/fetch-info';
+        // We removed yt-dlp completely because Netlify AWS Lambda IPs are blocked by YouTube
+        // bot protection ("Sign in to confirm you're not a bot").
+        // Cobalt handles YouTube and TikTok perfectly via alwaysProxy.
+        const fetchEndpoint = '/.netlify/functions/fetch-info';
 
         const res = await fetch(fetchEndpoint, {
           method: 'POST',
@@ -126,18 +124,7 @@ const ResultCard = ({ result, url }) => {
       if (dlUrl) {
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        if (platform === 'youtube') {
-          // YouTube CDN blocks XHR from cross-origin — use direct navigation instead
-          const a = document.createElement('a');
-          a.href = dlUrl;
-          a.download = safeName;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setProgressData({ percent: 100, speed: 0 });
-        } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt')) {
+        if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt')) {
           // Raw TikTok CDN links often block XHR via CORS. Opening them directly works!
           const a = document.createElement('a');
           a.href = dlUrl.includes('#') ? dlUrl : `${dlUrl}#${safeName}`;
@@ -149,6 +136,7 @@ const ResultCard = ({ result, url }) => {
           setDownloading(false);
         } else {
           try {
+            // Cobalt proxy URLs and other public URLs support CORS, so XHR works
             await downloadFile(dlUrl, safeName, (prog) => setProgressData(prog));
           } catch (downloadErr) {
             console.warn('XHR download failed, falling back to direct link:', downloadErr);
