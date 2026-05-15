@@ -365,8 +365,11 @@ const ResultCard = ({ result, url }) => {
             btnCls={meta.btnCls}
           />
         )}
+        {platform === 'youtube' && activeTab === 'thumbnail' && (
+          <YoutubeThumbnailTab videoId={extractYtId(url)} title={result?.previewMeta?.title || 'thumbnail'} btnCls={meta.btnCls} />
+        )}
 
-        {/* ═══ TIKTOK ═══ */}
+
         {platform === 'tiktok' && activeTab === 'video' && (
           <TikTokVideoTab muted={muted} setMuted={setMuted} downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} />
         )}
@@ -423,8 +426,9 @@ const ResultCard = ({ result, url }) => {
 /* ───────────────── Build tabs per platform ───────────────── */
 function buildTabs(platform, isGallery, t) {
   if (platform === 'youtube') return [
-    { id: 'mp3',   label: t('tab_mp3'),   icon: 'fa-solid fa-music' },
-    { id: 'video', label: t('tab_video'), icon: 'fa-solid fa-video' },
+    { id: 'mp3',       label: t('tab_mp3'),       icon: 'fa-solid fa-music' },
+    { id: 'video',     label: t('tab_video'),     icon: 'fa-solid fa-video' },
+    { id: 'thumbnail', label: 'Thumbnail', icon: 'fa-solid fa-image' },
   ];
   if (platform === 'tiktok') {
     const tabs = [
@@ -608,5 +612,83 @@ const GalleryTab = ({ items, selectedImgs, toggleImg, downloading, onDownloadSel
     </div>
   </div>
 );};
+
+const YoutubeThumbnailTab = ({ videoId, title, btnCls }) => {
+  const QUALITIES = [
+    { id: 'maxresdefault', label: 'Max HD', desc: '1280×720' },
+    { id: 'sddefault',     label: 'SD',     desc: '640×480' },
+    { id: 'hqdefault',     label: 'HQ',     desc: '480×360' },
+    { id: 'mqdefault',     label: 'MQ',     desc: '320×180' },
+  ];
+
+  const [selectedQ, setSelectedQ] = React.useState('maxresdefault');
+  const [downloading, setDownloading] = React.useState(false);
+
+  const getThumbUrl = (qId) => `https://i.ytimg.com/vi/${videoId}/${qId}.jpg`;
+
+  const handleDownload = async () => {
+    if (!videoId) return;
+    setDownloading(true);
+    try {
+      const thumbUrl = getThumbUrl(selectedQ);
+      const safeTitle = (title || 'thumbnail').replace(/[^\w\s-]/g, '').trim().substring(0, 60);
+      const filename = `HUSEVN DOWNLOADER - ${safeTitle} [${selectedQ}].jpg`;
+      const proxyUrl = `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(thumbUrl)}&filename=${encodeURIComponent(filename)}&audio=false`;
+
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    } catch (e) {
+      alert('Thumbnail yüklənmədi: ' + e.message);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (!videoId) return <div style={{color:'var(--text2)'}}>Video ID tapılmadı.</div>;
+
+  return (
+    <div>
+      {/* Quality selector */}
+      <div className="quality-row" style={{ marginBottom: '14px' }}>
+        {QUALITIES.map(q => (
+          <button key={q.id}
+            className={`quality-pill ${selectedQ === q.id ? 'selected yt' : ''}`}
+            onClick={() => setSelectedQ(q.id)}>
+            {q.label} <span style={{ fontSize: '0.75em', opacity: 0.7 }}>{q.desc}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Live preview */}
+      <div style={{ borderRadius: '10px', overflow: 'hidden', marginBottom: '14px', background: 'var(--card2)' }}>
+        <img
+          key={selectedQ}
+          src={getThumbUrl(selectedQ)}
+          alt="thumbnail preview"
+          style={{ width: '100%', display: 'block', maxHeight: '220px', objectFit: 'cover' }}
+          onError={e => { e.target.style.display = 'none'; }}
+        />
+      </div>
+
+      {/* Download button */}
+      <div className="action-row">
+        <button className={`btn ${btnCls}`} disabled={downloading} onClick={handleDownload}>
+          {downloading
+            ? <span className="spinner" />
+            : <><i className="fa-solid fa-image" /> Thumbnail Yüklə</>}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default ResultCard;
