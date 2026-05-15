@@ -96,11 +96,8 @@ const ResultCard = ({ result, url }) => {
       let dlExt = audioOnly ? 'mp3' : 'mp4';
 
       if (!dlUrl) {
-        // We use yt-dlp ONLY for TikTok audio because Cobalt free tier crashes (FFmpeg RAM limit).
-        // For YouTube, we MUST use Cobalt, because Netlify AWS IPs are strictly blocked by
-        // YouTube's bot protection (only returns 'mhtml' storyboard formats, no video/audio streams
-        // even with cookies.txt and IPv4 forcing).
-        const useYtDlp = (platform === 'tiktok' && audioOnly);
+        // Use RapidAPI (fetch-youtube) for YouTube and yt-dlp for TikTok MP3 requests.
+        const useYtDlp = platform === 'youtube' || (platform === 'tiktok' && audioOnly);
         const fetchEndpoint = useYtDlp
           ? '/.netlify/functions/fetch-youtube'
           : '/.netlify/functions/fetch-info';
