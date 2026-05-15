@@ -1,42 +1,34 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const PlatformIcons = () => {
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
+const platforms = [
+  { key: 'yt',  icon: 'fa-brands fa-youtube',   label: 'YouTube',   cls: 'pc-yt' },
+  { key: 'tt',  icon: 'fa-brands fa-tiktok',     label: 'TikTok',    cls: 'pc-tt' },
+  { key: 'ig',  icon: 'fa-brands fa-instagram',  label: 'Instagram', cls: 'pc-ig' },
+  { key: 'pi',  icon: 'fa-brands fa-pinterest',  label: 'Pinterest', cls: 'pc-pi' },
+  { key: 'fb',  icon: 'fa-brands fa-facebook',   label: 'Facebook',  cls: 'pc-fb' },
+];
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
-  };
-
-  return (
-    <motion.div 
-      variants={container}
-      initial="hidden"
-      animate="show"
-      style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        gap: '30px', 
-        marginTop: '30px',
-        marginBottom: '40px'
-      }}
-    >
-      <motion.i variants={item} className="fa-brands fa-youtube platform-icon youtube" title="YouTube"></motion.i>
-      <motion.i variants={item} className="fa-brands fa-tiktok platform-icon tiktok" title="TikTok"></motion.i>
-      <motion.i variants={item} className="fa-brands fa-instagram platform-icon instagram" title="Instagram"></motion.i>
-      <motion.i variants={item} className="fa-brands fa-pinterest platform-icon pinterest" title="Pinterest"></motion.i>
-      <motion.i variants={item} className="fa-brands fa-facebook platform-icon facebook" title="Facebook"></motion.i>
-    </motion.div>
-  );
-};
+const PlatformIcons = () => (
+  <motion.div
+    className="platforms"
+    initial="hidden"
+    animate="show"
+    variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+  >
+    {platforms.map(p => (
+      <motion.div
+        key={p.key}
+        className={`platform-card ${p.cls}`}
+        variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
+        whileHover={{ y: -4 }}
+        transition={{ type: 'spring', stiffness: 300 }}
+      >
+        <i className={p.icon} />
+        <span>{p.label}</span>
+      </motion.div>
+    ))}
+  </motion.div>
+);
 
 export default PlatformIcons;

@@ -4,25 +4,23 @@ import { motion } from 'framer-motion';
 
 const ProgressBar = ({ progress, speed }) => {
   const { t } = useTranslation();
-
   if (progress === null) return null;
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="glass-panel"
-      style={{ padding: '20px', marginTop: '20px', width: '100%' }}
+      className="progress-wrap"
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', fontWeight: 500 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text2)' }}>
         <span>{t('downloading')}</span>
-        <span>{progress}%</span>
+        <span style={{ color: 'var(--text)', fontWeight: 600 }}>{progress}%</span>
       </div>
-      <div className="progress-container">
-        <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+      <div className="progress-track">
+        <div className="progress-fill" style={{ width: `${progress}%` }} />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+      <div style={{ textAlign: 'right', marginTop: '6px', fontSize: '0.78rem', color: 'var(--text3)' }}>
         {t('speed')} {speed} MB/s
       </div>
     </motion.div>

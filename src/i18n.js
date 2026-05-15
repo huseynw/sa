@@ -3,6 +3,52 @@ const i18nConfig = {
     EN: {
       translation: {
         "title": "HUSEVN DOWNLOADER",
+        "hero_title": "HUSEVN DOWNLOADER",
+        "hero_subtitle": "Select a platform, paste a link — download in high quality.",
+        "paste": "Paste",
+        "search": "Search",
+        "empty_state": "Paste a link above to start downloading",
+
+        "yt_desc": "Download MP3 (with thumbnail) + Video in high quality",
+        "yt_feat1": "MP3 Audio", "yt_feat2": "HD Video", "yt_feat3": "4K Support",
+        "tt_desc": "Download video, MP3 and image slide posts",
+        "tt_feat1": "Video (sound/mute)", "tt_feat2": "MP3", "tt_feat3": "Photo gallery",
+        "ig_desc": "Download Reels videos and carousel images",
+        "ig_feat1": "Reels", "ig_feat2": "Post images", "ig_feat3": "Carousel",
+        "pi_desc": "Download Pinterest videos and images in high quality",
+        "pi_feat1": "Video", "pi_feat2": "Image",
+        "fb_desc": "Download Facebook videos and images in high quality",
+        "fb_feat1": "Video", "fb_feat2": "Image",
+
+        "yt_placeholder": "Paste a YouTube link here...",
+        "tt_placeholder": "Paste a TikTok video or post link...",
+        "ig_placeholder": "Paste an Instagram Reels or post link...",
+        "pi_placeholder": "Paste a Pinterest pin link...",
+        "fb_placeholder": "Paste a Facebook video or post link...",
+
+        "tab_mp3": "MP3 Audio",
+        "tab_video": "Video",
+        "tab_images": "Images",
+        "tab_reels": "Reels / Video",
+
+        "yt_mp3_info": "High quality MP3 with embedded thumbnail",
+        "qualities_loading": "Loading qualities...",
+        "quality_max": "⭐ Max",
+
+        "btn_mp3": "Download MP3",
+        "btn_video": "Download Video",
+        "btn_audio_only": "Audio Only",
+        "btn_muted": "Download Muted",
+        "btn_image": "Download Image",
+        "btn_reels": "Download Reels / Video",
+        "btn_selected": "Download Selected ({count})",
+
+        "tt_muted_label": "Muted Video",
+        "tt_sound_label": "Video with Sound",
+        "audio_info": "Will be downloaded as high quality MP3",
+        "gallery_info": "Select the images you want to download ({count} selected)",
+        "link_ok": "Link OK",
+
         "placeholder": "Paste video or image link here...",
         "download": "Download",
         "downloading": "Downloading...",
@@ -19,6 +65,52 @@ const i18nConfig = {
     AZ: {
       translation: {
         "title": "HUSEVN YÜKLƏYİCİ",
+        "hero_title": "HUSEVN YÜKLƏYİCİ",
+        "hero_subtitle": "Platformu seçin, linki yapışdırın — yüksək keyfiyyətlə yükləyin.",
+        "paste": "Yapışdır",
+        "search": "Axtar",
+        "empty_state": "Yükləmək üçün link yapışdırın",
+
+        "yt_desc": "MP3 (thumbnail ilə) + Video yüksək keyfiyyətdə yüklə",
+        "yt_feat1": "MP3 Audio", "yt_feat2": "HD Video", "yt_feat3": "4K dəstək",
+        "tt_desc": "Video, MP3 və şəkil slide postlarını yüklə",
+        "tt_feat1": "Video (səsli/səssiz)", "tt_feat2": "MP3", "tt_feat3": "Şəkil gallery",
+        "ig_desc": "Reels video və carousel şəkilləri yüklə",
+        "ig_feat1": "Reels", "ig_feat2": "Post şəkilləri", "ig_feat3": "Carousel",
+        "pi_desc": "Pinterest video və şəkilləri yüksək keyfiyyətdə yüklə",
+        "pi_feat1": "Video", "pi_feat2": "Şəkil",
+        "fb_desc": "Facebook video və şəkilləri yüksək keyfiyyətdə yüklə",
+        "fb_feat1": "Video", "fb_feat2": "Şəkil",
+
+        "yt_placeholder": "YouTube linkini yapışdırın...",
+        "tt_placeholder": "TikTok video və ya post linkini yapışdırın...",
+        "ig_placeholder": "Instagram Reels və ya post linkini yapışdırın...",
+        "pi_placeholder": "Pinterest pin linkini yapışdırın...",
+        "fb_placeholder": "Facebook video və ya post linkini yapışdırın...",
+
+        "tab_mp3": "MP3 Audio",
+        "tab_video": "Video",
+        "tab_images": "Şəkillər",
+        "tab_reels": "Reels / Video",
+
+        "yt_mp3_info": "Thumbnail əlavə olunmuş yüksək keyfiyyətli MP3",
+        "qualities_loading": "Keyfiyyətlər yüklənir...",
+        "quality_max": "⭐ Maksimum",
+
+        "btn_mp3": "MP3 Yüklə",
+        "btn_video": "Video Yüklə",
+        "btn_audio_only": "Yalnız Səs",
+        "btn_muted": "Səssiz Yüklə",
+        "btn_image": "Şəkil Yüklə",
+        "btn_reels": "Reels / Video Yüklə",
+        "btn_selected": "Seçilənləri Yüklə ({{count}})",
+
+        "tt_muted_label": "Səssiz Video",
+        "tt_sound_label": "Səsli Video",
+        "audio_info": "Yüksək keyfiyyətli MP3 formatında yüklənəcək",
+        "gallery_info": "Yükləmək istədiyiniz şəkilləri seçin ({{count}} seçilib)",
+        "link_ok": "Link OK",
+
         "placeholder": "Video və ya şəkil linkini bura yapışdırın...",
         "download": "Yüklə",
         "downloading": "Yüklənir...",
@@ -35,6 +127,52 @@ const i18nConfig = {
     TR: {
       translation: {
         "title": "HUSEVN İNDİRİCİ",
+        "hero_title": "HUSEVN İNDİRİCİ",
+        "hero_subtitle": "Platform seçin, linki yapıştırın — yüksek kalitede indirin.",
+        "paste": "Yapıştır",
+        "search": "Ara",
+        "empty_state": "İndirmek için link yapıştırın",
+
+        "yt_desc": "MP3 (kapak resmiyle) + Video yüksek kalitede indir",
+        "yt_feat1": "MP3 Ses", "yt_feat2": "HD Video", "yt_feat3": "4K Destek",
+        "tt_desc": "Video, MP3 ve fotoğraf slayt gönderilerini indir",
+        "tt_feat1": "Video (sesli/sessiz)", "tt_feat2": "MP3", "tt_feat3": "Fotoğraf galerisi",
+        "ig_desc": "Reels videoları ve carousel fotoğrafları indir",
+        "ig_feat1": "Reels", "ig_feat2": "Gönderi fotoğrafları", "ig_feat3": "Carousel",
+        "pi_desc": "Pinterest video ve fotoğraflarını yüksek kalitede indir",
+        "pi_feat1": "Video", "pi_feat2": "Fotoğraf",
+        "fb_desc": "Facebook video ve fotoğraflarını yüksek kalitede indir",
+        "fb_feat1": "Video", "fb_feat2": "Fotoğraf",
+
+        "yt_placeholder": "YouTube linkini yapıştırın...",
+        "tt_placeholder": "TikTok video veya gönderi linkini yapıştırın...",
+        "ig_placeholder": "Instagram Reels veya gönderi linkini yapıştırın...",
+        "pi_placeholder": "Pinterest pin linkini yapıştırın...",
+        "fb_placeholder": "Facebook video veya gönderi linkini yapıştırın...",
+
+        "tab_mp3": "MP3 Ses",
+        "tab_video": "Video",
+        "tab_images": "Fotoğraflar",
+        "tab_reels": "Reels / Video",
+
+        "yt_mp3_info": "Kapak resmi gömülü yüksek kaliteli MP3",
+        "qualities_loading": "Kaliteler yükleniyor...",
+        "quality_max": "⭐ Maksimum",
+
+        "btn_mp3": "MP3 İndir",
+        "btn_video": "Video İndir",
+        "btn_audio_only": "Sadece Ses",
+        "btn_muted": "Sessiz İndir",
+        "btn_image": "Fotoğraf İndir",
+        "btn_reels": "Reels / Video İndir",
+        "btn_selected": "Seçilenleri İndir ({count})",
+
+        "tt_muted_label": "Sessiz Video",
+        "tt_sound_label": "Sesli Video",
+        "audio_info": "Yüksek kaliteli MP3 formatında indirilecek",
+        "gallery_info": "İndirmek istediğiniz fotoğrafları seçin ({count} seçildi)",
+        "link_ok": "Link OK",
+
         "placeholder": "Video veya resim linkini buraya yapıştırın...",
         "download": "İndir",
         "downloading": "İndiriliyor...",
@@ -51,6 +189,52 @@ const i18nConfig = {
     RU: {
       translation: {
         "title": "HUSEVN ЗАГРУЗЧИК",
+        "hero_title": "HUSEVN ЗАГРУЗЧИК",
+        "hero_subtitle": "Выберите платформу, вставьте ссылку — скачайте в высоком качестве.",
+        "paste": "Вставить",
+        "search": "Найти",
+        "empty_state": "Вставьте ссылку чтобы начать скачивание",
+
+        "yt_desc": "Скачать MP3 (с обложкой) + Видео в высоком качестве",
+        "yt_feat1": "MP3 Аудио", "yt_feat2": "HD Видео", "yt_feat3": "4K поддержка",
+        "tt_desc": "Скачать видео, MP3 и слайд-посты с фото",
+        "tt_feat1": "Видео (со звуком/без)", "tt_feat2": "MP3", "tt_feat3": "Галерея фото",
+        "ig_desc": "Скачать Reels видео и карусельные фото",
+        "ig_feat1": "Reels", "ig_feat2": "Фото постов", "ig_feat3": "Карусель",
+        "pi_desc": "Скачать видео и фото Pinterest в высоком качестве",
+        "pi_feat1": "Видео", "pi_feat2": "Фото",
+        "fb_desc": "Скачать видео и фото Facebook в высоком качестве",
+        "fb_feat1": "Видео", "fb_feat2": "Фото",
+
+        "yt_placeholder": "Вставьте ссылку YouTube...",
+        "tt_placeholder": "Вставьте ссылку TikTok видео или поста...",
+        "ig_placeholder": "Вставьте ссылку Instagram Reels или поста...",
+        "pi_placeholder": "Вставьте ссылку Pinterest пина...",
+        "fb_placeholder": "Вставьте ссылку Facebook видео или поста...",
+
+        "tab_mp3": "MP3 Аудио",
+        "tab_video": "Видео",
+        "tab_images": "Фото",
+        "tab_reels": "Reels / Видео",
+
+        "yt_mp3_info": "MP3 высокого качества со встроенной обложкой",
+        "qualities_loading": "Загрузка качеств...",
+        "quality_max": "⭐ Максимум",
+
+        "btn_mp3": "Скачать MP3",
+        "btn_video": "Скачать видео",
+        "btn_audio_only": "Только аудио",
+        "btn_muted": "Скачать без звука",
+        "btn_image": "Скачать фото",
+        "btn_reels": "Скачать Reels / Видео",
+        "btn_selected": "Скачать выбранные ({count})",
+
+        "tt_muted_label": "Видео без звука",
+        "tt_sound_label": "Видео со звуком",
+        "audio_info": "Будет скачано в формате MP3 высокого качества",
+        "gallery_info": "Выберите фото для скачивания (выбрано {count})",
+        "link_ok": "Ссылка OK",
+
         "placeholder": "Вставьте ссылку на видео или фото сюда...",
         "download": "Скачать",
         "downloading": "Загрузка...",
@@ -59,17 +243,15 @@ const i18nConfig = {
         "select_quality": "Выберите качество",
         "download_selected_images": "Скачать выбранные фото",
         "error_invalid_url": "Пожалуйста, введите правильный URL.",
-        "error_fetching": "Ошибка при получении данных. Попробуйте еще раз.",
+        "error_fetching": "Ошибка при получении данных. Попробуйте ещё раз.",
         "speed": "Скорость:",
         "progress": "Прогресс:"
       }
     }
   },
-  lng: "EN",
+  lng: "AZ",
   fallbackLng: "EN",
-  interpolation: {
-    escapeValue: false
-  }
+  interpolation: { escapeValue: false }
 };
 
 export default i18nConfig;

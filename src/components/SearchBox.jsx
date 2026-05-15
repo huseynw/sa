@@ -11,51 +11,56 @@ const SearchBox = ({ onSearch, loading }) => {
       const text = await navigator.clipboard.readText();
       setUrl(text);
     } catch (err) {
-      console.error('Failed to read clipboard contents: ', err);
+      console.error('Clipboard read failed:', err);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (url.trim()) {
-      onSearch(url.trim());
-    }
+    if (url.trim()) onSearch(url.trim());
   };
 
   return (
-    <motion.div 
+    <motion.div
+      style={{ width: '100%', maxWidth: '720px', margin: '0 auto' }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      style={{ width: '100%', maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
     >
-      <form onSubmit={handleSubmit} style={{ position: 'relative' }}>
-        <input
-          type="text"
-          className="input-premium glass-panel"
-          placeholder={t('placeholder')}
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          style={{ paddingRight: '120px' }}
-        />
-        <div style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: '8px' }}>
-          <button 
-            type="button" 
-            onClick={handlePaste}
-            className="btn btn-secondary"
-            style={{ padding: '8px 12px', borderRadius: '12px' }}
-            title="Paste"
-          >
-            <i className="fa-regular fa-clipboard"></i>
-          </button>
-          <button 
-            type="submit" 
-            className="btn btn-primary"
-            style={{ padding: '8px 20px', borderRadius: '12px' }}
-            disabled={loading}
-          >
-            {loading ? <div className="loader"></div> : <i className="fa-solid fa-arrow-right"></i>}
-          </button>
+      <form onSubmit={handleSubmit}>
+        <div className="search-wrapper">
+          <i className="fa-solid fa-link" style={{ color: 'var(--text3)', marginLeft: '12px', fontSize: '0.9rem' }} />
+          <input
+            className="search-input"
+            type="text"
+            placeholder={t('placeholder')}
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            autoComplete="off"
+            spellCheck="false"
+          />
+          <div className="search-actions">
+            <button
+              type="button"
+              onClick={handlePaste}
+              className="btn btn-ghost"
+              style={{ padding: '8px 14px', borderRadius: '12px', fontSize: '0.85rem' }}
+              title="Paste"
+            >
+              <i className="fa-regular fa-clipboard" /> Paste
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ padding: '8px 20px', borderRadius: '12px' }}
+              disabled={loading}
+            >
+              {loading
+                ? <span className="spinner" />
+                : <><i className="fa-solid fa-download" /> Download</>
+              }
+            </button>
+          </div>
         </div>
       </form>
     </motion.div>

@@ -5,32 +5,33 @@ export const handler = async (event, context) => {
 
   try {
     const body = JSON.parse(event.body);
-    const { url, isAudioOnly, quality } = body;
+    const { url, isAudioOnly, quality, isMuted } = body;
 
     if (!url) {
       return { statusCode: 400, body: JSON.stringify({ error: "URL is required" }) };
     }
 
-    // Istifadəçinin Netlify-da təyin etdiyi şəxsi Cobalt API URL-i və (əgər varsa) API Tokeni
     const cobaltUrl = process.env.COBALT_API_URL;
     const cobaltToken = process.env.COBALT_API_KEY;
 
     if (!cobaltUrl) {
-      return { 
-        statusCode: 500, 
+      return {
+        statusCode: 500,
         headers: { "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify({ error: "COBALT_API_URL environment variable is not set. Please deploy your Cobalt instance and set the URL in Netlify settings." }) 
+        body: JSON.stringify({ error: "COBALT_API_URL environment variable is not set." })
       };
     }
 
     const cobaltPayload = {
       url: url,
-      videoQuality: quality === "max" ? "max" : (quality || "1080"),
+      videoQuality: quality === "max" ? "max" : (quality || "max"),
       filenameStyle: "nerdy",
       alwaysProxy: true
     };
 
-    if (isAudioOnly) {
+    if (isMuted) {
+      cobaltPayload.downloadMode = "mute";
+    } else if (isAudioOnly) {
       cobaltPayload.downloadMode = "audio";
       cobaltPayload.audioFormat = "mp3";
     }
@@ -40,7 +41,6 @@ export const handler = async (event, context) => {
       "Content-Type": "application/json",
     };
 
-    // Əgər istifadəçi öz serverinə şifrə (Auth) qoyubsa, onu da göndəririk
     if (cobaltToken) {
       headers["Authorization"] = `Api-Key ${cobaltToken}`;
     }
@@ -71,7 +71,7 @@ export const handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "Failed to fetch information. Ensure your self-hosted Cobalt instance is running correctly." })
+      body: JSON.stringify({ error: "Failed to fetch information." })
     };
   }
 };

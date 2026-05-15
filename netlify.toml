@@ -1,15 +1,17 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
+  command   = "npm run build"
+  publish   = "dist"
   functions = "netlify/functions"
 
-[dev]
-  command = "npm run dev"
-  port = 8890
-  targetPort = 5173
-  publish = "dist"
+[build.environment]
+  NODE_VERSION = "18"
+
+[functions]
+  node_bundler         = "esbuild"
+  external_node_modules = ["youtube-dl-exec"]
+  included_files       = ["node_modules/youtube-dl-exec/bin/**"]
 
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from   = "/*"
+  to     = "/index.html"
   status = 200

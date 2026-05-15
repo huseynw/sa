@@ -9,54 +9,33 @@ const Header = () => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
-
-  const changeLanguage = (e) => {
-    i18n.changeLanguage(e.target.value);
-  };
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
   return (
-    <header style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '20px 40px',
-      position: 'relative',
-      zIndex: 10
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: 'var(--primary-color)'
-      }}>
-        <i className="fa-solid fa-cloud-arrow-down"></i>
+    <header className="header">
+      <div className="logo">
+        <i className="fa-solid fa-bolt-lightning" />
         <span>HUSEVN</span>
       </div>
 
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-        <select 
-          className="select-premium" 
-          value={i18n.language} 
-          onChange={changeLanguage}
-          style={{ width: '80px', padding: '8px 12px' }}
+      <div className="header-right">
+        <select
+          className="select-clean"
+          value={i18n.language}
+          onChange={e => i18n.changeLanguage(e.target.value)}
         >
-          <option value="AZ">AZ</option>
-          <option value="TR">TR</option>
-          <option value="EN">EN</option>
-          <option value="RU">RU</option>
+          <option value="AZ">🇦🇿 AZ</option>
+          <option value="TR">🇹🇷 TR</option>
+          <option value="EN">🇬🇧 EN</option>
+          <option value="RU">🇷🇺 RU</option>
         </select>
 
-        <button 
-          onClick={toggleTheme} 
-          className="btn btn-secondary"
-          style={{ width: '40px', height: '40px', padding: 0, borderRadius: '50%' }}
+        <button
+          onClick={toggleTheme}
+          className="btn btn-icon"
+          title="Toggle theme"
         >
-          <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
+          <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`} />
         </button>
       </div>
     </header>

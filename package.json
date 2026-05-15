@@ -18,9 +18,12 @@
     "i18next": "^26.1.0",
     "media-downloader-ez": "^2.1.9",
     "nayan-media-downloader": "^0.0.1-security",
+    "play-dl": "^1.9.7",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-i18next": "^17.0.7"
+    "react-i18next": "^17.0.7",
+    "youtube-dl-exec": "^3.1.6",
+    "youtube-ext": "^1.1.25"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
