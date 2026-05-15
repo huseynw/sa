@@ -39,17 +39,20 @@ export const handler = async (event, context) => {
       ]
     };
 
-    // 1. Try to use a physical cookies.txt file from the project root if it exists
+    // yt-dlp tries to write back to the cookies file on exit.
+    // In Netlify Lambda, /var/task is read-only, so we must copy cookies.txt to /tmp first.
     const localCookiesPath = path.join(taskRoot, 'cookies.txt');
+    const tmpCookiesPath = path.join(os.tmpdir(), 'youtube_cookies.txt');
+
     if (fs.existsSync(localCookiesPath)) {
-      ytOptions.cookies = localCookiesPath;
-      console.log('[fetch-youtube] Using local cookies.txt file from project root');
+      fs.copyFileSync(localCookiesPath, tmpCookiesPath);
+      ytOptions.cookies = tmpCookiesPath;
+      console.log('[fetch-youtube] Using local cookies.txt file copied to /tmp');
     } 
-    // 2. Fallback to YOUTUBE_COOKIES environment variable
+    // Fallback to YOUTUBE_COOKIES environment variable
     else if (process.env.YOUTUBE_COOKIES) {
-      const cookiesPath = path.join(os.tmpdir(), 'youtube_cookies.txt');
-      fs.writeFileSync(cookiesPath, process.env.YOUTUBE_COOKIES);
-      ytOptions.cookies = cookiesPath;
+      fs.writeFileSync(tmpCookiesPath, process.env.YOUTUBE_COOKIES);
+      ytOptions.cookies = tmpCookiesPath;
       console.log('[fetch-youtube] Using cookies from YOUTUBE_COOKIES env var');
     }
 
