@@ -96,10 +96,12 @@ const ResultCard = ({ result, url }) => {
       let dlExt = audioOnly ? 'mp3' : 'mp4';
 
       if (!dlUrl) {
-        // We removed yt-dlp completely because Netlify AWS Lambda IPs are blocked by YouTube
-        // bot protection ("Sign in to confirm you're not a bot").
-        // Cobalt handles YouTube and TikTok perfectly via alwaysProxy.
-        const fetchEndpoint = '/.netlify/functions/fetch-info';
+        // Use yt-dlp (fetch-youtube) for YouTube and TikTok MP3 requests.
+        // It now uses cookies to bypass bot protection.
+        const useYtDlp = platform === 'youtube' || (platform === 'tiktok' && audioOnly);
+        const fetchEndpoint = useYtDlp
+          ? '/.netlify/functions/fetch-youtube'
+          : '/.netlify/functions/fetch-info';
 
         const res = await fetch(fetchEndpoint, {
           method: 'POST',

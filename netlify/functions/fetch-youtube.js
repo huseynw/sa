@@ -28,8 +28,7 @@ export const handler = async (event, context) => {
       return { statusCode: 400, body: JSON.stringify({ error: "URL is required" }) };
     }
 
-    // Use yt-dlp to extract the video info, bypasses broken decipher in play-dl
-    const info = await youtubedl(url, {
+    const ytOptions = {
       dumpJson: true,
       noCheckCertificates: true,
       noWarnings: true,
@@ -38,7 +37,18 @@ export const handler = async (event, context) => {
         'referer:youtube.com',
         'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
       ]
-    });
+    };
+
+    // If YOUTUBE_COOKIES environment variable is provided, save it to a temp file and use it
+    if (process.env.YOUTUBE_COOKIES) {
+      const cookiesPath = path.join(os.tmpdir(), 'youtube_cookies.txt');
+      fs.writeFileSync(cookiesPath, process.env.YOUTUBE_COOKIES);
+      ytOptions.cookies = cookiesPath;
+      console.log('[fetch-youtube] Using cookies from YOUTUBE_COOKIES env var');
+    }
+
+    // Use yt-dlp to extract the video info, bypasses broken decipher in play-dl
+    const info = await youtubedl(url, ytOptions);
 
     if (!info || !info.formats || info.formats.length === 0) {
       throw new Error("YouTube URL-ləri tapılmadı.");
