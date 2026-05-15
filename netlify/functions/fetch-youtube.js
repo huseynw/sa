@@ -33,35 +33,54 @@ export const handler = async (event, context) => {
       return { statusCode: 400, body: JSON.stringify({ error: "URL is required" }) };
     }
 
-    // --- TIKTOK LOGIC (yt-dlp) ---
+    // --- TIKTOK LOGIC (tikwm.com) ---
     if (url.includes('tiktok.com')) {
-      const ytOptions = {
-        dumpSingleJson: true,
-        noCheckCertificates: true,
-        noWarnings: true,
-        addHeader: [
-          'referer:tiktok.com',
-          'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-        ]
-      };
+      const tikwmUrl = 'https://www.tikwm.com/api/';
+      const params = new URLSearchParams({ url: url });
       
-      const info = await youtubedl(url, ytOptions);
-      if (!info || !info.url) {
-        throw new Error("TikTok mediası tapılmadı.");
+      const tikwmRes = await fetch(tikwmUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        body: params.toString()
+      });
+
+      const tikwmData = await tikwmRes.json();
+      
+      if (tikwmData.code !== 0 || !tikwmData.data) {
+        throw new Error("TikTok mediası tapılmadı və ya keçid yanlışdır.");
       }
       
-      const videoTitle = info.title || 'tiktok_video';
-      const safeName = videoTitle.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'tiktok_video';
-      const ext = info.ext || 'mp4';
+      const videoTitle = tikwmData.data.title || 'tiktok_video';
       
+      let finalUrl;
+      let ext;
+
+      if (isAudioOnly) {
+        finalUrl = tikwmData.data.music || tikwmData.data.play;
+        ext = 'mp3';
+      } else {
+        if (tikwmData.data.images && tikwmData.data.images.length > 0) {
+          // Photo gallery fallback: return the first photo
+          finalUrl = tikwmData.data.images[0];
+          ext = 'jpeg';
+        } else {
+          // Normal Video
+          finalUrl = tikwmData.data.play || tikwmData.data.wmplay;
+          ext = 'mp4';
+        }
+      }
+
       // Do NOT proxy TikTok URLs. Direct CDN link with no-referrer works best.
       return {
         statusCode: 200,
         headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({
           title: videoTitle,
-          url: info.url,
-          ext: isAudioOnly ? 'mp3' : ext,
+          url: finalUrl,
+          ext: ext,
           status: "redirect"
         }),
       };
