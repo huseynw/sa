@@ -54,6 +54,7 @@ export const handler = async (event, context) => {
       }
       
       const videoTitle = tikwmData.data.title || 'tiktok_video';
+      const safeName = videoTitle.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'tiktok_video';
       
       let finalUrl;
       let ext;
