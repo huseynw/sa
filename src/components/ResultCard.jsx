@@ -138,14 +138,22 @@ const ResultCard = ({ result, url }) => {
               || (invData.adaptiveFormats || [])[0];
             if (!fmt) throw new Error('Audio format tapılmadı');
             const qs = new URL(fmt.url).search;
-            dlUrl = `${invBase}/videoplayback${qs}`;
-            dlExt = 'm4a';
+            const invUrl = `${invBase}/videoplayback${qs}`;
+            // Route through our proxy for CORS-safe XHR download + correct filename
+            const title = invData.title?.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'youtube_audio';
+            const filename = `HUSEVN DOWNLOADER - ${title}.mp3`;
+            dlUrl = `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(invUrl)}&filename=${encodeURIComponent(filename)}&audio=true`;
+            dlExt = 'mp3';
           } else {
             const fmt = (invData.formatStreams || []).find(f => f.itag === '18')
               || invData.formatStreams?.[0];
             if (!fmt) throw new Error('Video format tapılmadı');
             const qs = new URL(fmt.url).search;
-            dlUrl = `${invBase}/videoplayback${qs}`;
+            const invUrl = `${invBase}/videoplayback${qs}`;
+            // Route through our proxy for CORS-safe XHR download + correct filename
+            const title = invData.title?.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'youtube_video';
+            const filename = `HUSEVN DOWNLOADER - ${title}.mp4`;
+            dlUrl = `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(invUrl)}&filename=${encodeURIComponent(filename)}&audio=false`;
             dlExt = 'mp4';
           }
 

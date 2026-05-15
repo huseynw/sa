@@ -14,12 +14,18 @@ export default async (req, context) => {
     let origin = 'https://www.youtube.com';
     let referer = 'https://www.youtube.com/';
     
-    if (tUrl.hostname.includes('tiktok.com')) {
+    if (tUrl.hostname.includes('tiktok.com') || tUrl.hostname.includes('tikwm.com')) {
       origin = 'https://www.tiktok.com';
       referer = 'https://www.tiktok.com/';
     } else if (tUrl.hostname.includes('instagram.com')) {
       origin = 'https://www.instagram.com';
       referer = 'https://www.instagram.com/';
+    } else if (tUrl.hostname.includes('invidious') || tUrl.hostname.includes('inv.') || 
+               tUrl.hostname.includes('yt.') || tUrl.hostname.includes('vid.') ||
+               tUrl.hostname.includes('y.com.sb') || tUrl.hostname.includes('thepixora')) {
+      // Invidious proxy — use YouTube as referer so it fetches correctly
+      origin = 'https://www.youtube.com';
+      referer = 'https://www.youtube.com/';
     }
 
     // Fetch the media from CDN
@@ -36,15 +42,19 @@ export default async (req, context) => {
     }
 
     const contentType = isAudioOnly ? 'audio/mpeg' : 'video/mp4';
+    const contentLength = ytResponse.headers.get('content-length');
 
     // Pipe the response back to the client
+    const responseHeaders = {
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Access-Control-Allow-Origin': '*',
+    };
+    if (contentLength) responseHeaders['Content-Length'] = contentLength;
+
     return new Response(ytResponse.body, {
       status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Access-Control-Allow-Origin': '*',
-      }
+      headers: responseHeaders,
     });
   } catch (error) {
     return new Response(`Proxy Error: ${error.message}`, { status: 500 });
