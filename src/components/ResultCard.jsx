@@ -88,12 +88,12 @@ const ResultCard = ({ result, url }) => {
   };
 
   /* ── Core download handler ── */
-  const handleDownload = async ({ audioOnly = false, specificUrl = null, isMuted = false } = {}) => {
+  const handleDownload = async ({ audioOnly = false, specificUrl = null, isMuted = false, imageMode = false } = {}) => {
     try {
       setDownloading(true);
       setProgressData({ percent: 0, speed: 0 });
       let dlUrl = specificUrl;
-      let dlExt = audioOnly ? 'mp3' : 'mp4';
+      let dlExt = audioOnly ? 'mp3' : (imageMode ? 'jpg' : 'mp4');
 
       if (!dlUrl) {
         if (platform === 'youtube') {
@@ -182,6 +182,16 @@ const ResultCard = ({ result, url }) => {
       }
 
       if (dlUrl) {
+        // Auto-detect image extension from URL (Cobalt returns direct image CDN links)
+        if (imageMode || dlExt === 'jpg') {
+          try {
+            const urlPath = new URL(dlUrl).pathname.toLowerCase();
+            if (urlPath.endsWith('.png')) dlExt = 'png';
+            else if (urlPath.endsWith('.webp')) dlExt = 'webp';
+            else if (urlPath.endsWith('.jpeg') || urlPath.endsWith('.jpg')) dlExt = 'jpg';
+            else if (urlPath.endsWith('.gif')) dlExt = 'gif';
+          } catch (e) { /* keep default */ }
+        }
         const safeName = `${getBaseName()}.${dlExt}`;
 
         if (platform === 'youtube' && dlUrl.includes('/videoplayback')) {
@@ -556,7 +566,7 @@ const ImageTab = ({ downloading, onDownload, btnCls }) => {
   <div>
     <div className="action-row">
       <button className={`btn ${btnCls}`} disabled={downloading}
-        onClick={() => onDownload({ audioOnly: false, filename: 'image.jpg' })}>
+        onClick={() => onDownload({ audioOnly: false, imageMode: true, filename: 'image.jpg' })}>
         {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-image" /> {t('btn_image')}</>}
       </button>
     </div>
