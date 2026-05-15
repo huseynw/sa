@@ -1,4 +1,13 @@
-const youtubedl = require('youtube-dl-exec');
+const { create } = require('youtube-dl-exec');
+const path = require('path');
+const os = require('os');
+
+// Resolve the correct yt-dlp binary path for the current platform
+// On Linux (Netlify), use 'yt-dlp'; on Windows, use 'yt-dlp.exe'
+const isWindows = os.platform() === 'win32';
+const binName = isWindows ? 'yt-dlp.exe' : 'yt-dlp';
+const binPath = path.join(__dirname, 'node_modules', 'youtube-dl-exec', 'bin', binName);
+const youtubedl = create(binPath);
 
 export const handler = async (event, context) => {
   if (event.httpMethod !== "POST") {
