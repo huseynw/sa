@@ -29,10 +29,9 @@ export const handler = async (event, context) => {
     }
 
     const ytOptions = {
-      dumpJson: true,
+      dumpSingleJson: true,
       noCheckCertificates: true,
       noWarnings: true,
-      format: 'bestvideo+bestaudio/best',
       addHeader: [
         'referer:youtube.com',
         'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
