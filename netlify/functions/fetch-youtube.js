@@ -73,13 +73,14 @@ export const handler = async (event, context) => {
     }
 
     if (!targetFormat) {
-      // Fallback: Best muxed format (audio + video, usually 360p or 720p mp4)
-      const muxedFormats = info.formats.filter(f => f.acodec !== 'none' && f.vcodec !== 'none' && f.ext === 'mp4');
-      // Sort by height descending
+      // Fallback: Best muxed format (audio + video)
+      // Allow any extension (webm or mp4) as long as it has both audio and video
+      const muxedFormats = info.formats.filter(f => f.acodec !== 'none' && f.vcodec !== 'none' && f.acodec && f.vcodec);
       targetFormat = muxedFormats.sort((a, b) => (b.height || 0) - (a.height || 0))[0];
     }
 
     if (!targetFormat || !targetFormat.url) {
+      console.error("[fetch-youtube] Available formats:", info.formats.map(f => ({ id: f.format_id, ext: f.ext, ac: f.acodec, vc: f.vcodec })));
       throw new Error("Uyğun format tapılmadı");
     }
 
