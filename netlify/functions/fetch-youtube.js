@@ -1,12 +1,19 @@
 const { create } = require('youtube-dl-exec');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 
-// Resolve the correct yt-dlp binary path for the current platform
-// On Linux (Netlify), use 'yt-dlp'; on Windows, use 'yt-dlp.exe'
+// In Netlify Lambda, files live under LAMBDA_TASK_ROOT (usually /var/task)
+// On local dev (Windows/Linux), fall back to process.cwd()
+const taskRoot = process.env.LAMBDA_TASK_ROOT || process.cwd();
 const isWindows = os.platform() === 'win32';
 const binName = isWindows ? 'yt-dlp.exe' : 'yt-dlp';
-const binPath = path.join(__dirname, 'node_modules', 'youtube-dl-exec', 'bin', binName);
+const binPath = path.join(taskRoot, 'node_modules', 'youtube-dl-exec', 'bin', binName);
+
+console.log('[fetch-youtube] Platform:', os.platform());
+console.log('[fetch-youtube] Binary path:', binPath);
+console.log('[fetch-youtube] Binary exists:', fs.existsSync(binPath));
+
 const youtubedl = create(binPath);
 
 export const handler = async (event, context) => {
