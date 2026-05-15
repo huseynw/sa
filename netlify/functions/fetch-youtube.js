@@ -11,33 +11,65 @@ const binPath = path.join(taskRoot, 'node_modules', 'youtube-dl-exec', 'bin', bi
 
 const youtubedl = create(binPath);
 
-// Invidious instances to try in order (they proxy YouTube streams through their own servers, NO IP-lock issues)
+// Large pool of Invidious instances — tried in PARALLEL to avoid Lambda timeout
 const INVIDIOUS_INSTANCES = [
   'https://inv.thepixora.com',
   'https://invidious.adminforge.de',
   'https://invidious.fdn.fr',
+  'https://iv.datura.network',
+  'https://invidious.privacydev.net',
+  'https://inv.nadeko.net',
+  'https://invidious.nerdvpn.de',
+  'https://yt.artemislena.eu',
+  'https://invidious.flokinet.to',
+  'https://inv.clip.bike',
+  'https://inv.vern.cc',
+  'https://invidious.lunar.icu',
+  'https://yt.cdaut.de',
+  'https://invidious.tiekoetter.com',
+  'https://invidious.asir.dev',
+  'https://invidious.protokolla.fi',
+  'https://invidious.perennialte.ch',
+  'https://invidious.reallyaweso.me',
+  'https://vid.puffyan.us',
+  'https://y.com.sb',
 ];
+
+async function fetchFromInvidious(videoId) {
+  // Try ALL instances in parallel with a 5s timeout each — return first success
+  const tryInstance = async (base) => {
+    const res = await fetch(
+      `${base}/api/v1/videos/${videoId}?fields=title,formatStreams,adaptiveFormats`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.title) throw new Error('no title in response');
+    return { data, base };
+  };
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let failures = 0;
+    const total = INVIDIOUS_INSTANCES.length;
+
+    INVIDIOUS_INSTANCES.forEach(base => {
+      tryInstance(base).then(result => {
+        if (!settled) { settled = true; resolve(result); }
+      }).catch(() => {
+        failures++;
+        if (failures === total && !settled) {
+          reject(new Error('Bütün Invidious serverləri cavab vermədi.'));
+        }
+      });
+    });
+  });
+}
+
 
 function extractVideoId(url) {
   const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
   return match ? match[1] : null;
-}
-
-async function fetchFromInvidious(videoId) {
-  for (const base of INVIDIOUS_INSTANCES) {
-    try {
-      const res = await fetch(
-        `${base}/api/v1/videos/${videoId}?fields=title,author,formatStreams,adaptiveFormats`,
-        { signal: AbortSignal.timeout(8000) }
-      );
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.title) return { data, base };
-    } catch (e) {
-      console.warn(`[fetch-youtube] Invidious instance failed: ${base}`, e.message);
-    }
-  }
-  throw new Error('Bütün Invidious serverləri cavab vermədi.');
 }
 
 export const handler = async (event, context) => {
