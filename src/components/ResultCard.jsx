@@ -126,19 +126,7 @@ const ResultCard = ({ result, url }) => {
       if (dlUrl) {
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        if (platform === 'youtube' && dlUrl.includes('googlevideo.com')) {
-          // RapidAPI YouTube URLs are IP-locked to their servers.
-          // XHR fails with CORS. We use a direct anchor-tag to trigger the download.
-          const a = document.createElement('a');
-          a.href = dlUrl;
-          a.download = safeName;
-          a.target = '_blank';
-          a.rel = 'noreferrer';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setDownloading(false);
-        } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
+        if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
           // Raw TikTok CDN links often block XHR via CORS. Opening them directly works!
           const a = document.createElement('a');
           a.href = dlUrl.includes('#') ? dlUrl : `${dlUrl}#${safeName}`;
@@ -152,7 +140,7 @@ const ResultCard = ({ result, url }) => {
           setDownloading(false);
         } else {
           try {
-            // Cobalt proxy URLs and tikwm proxy URLs support CORS, so XHR works
+            // Invidious proxy URLs (YouTube) and tikwm proxy URLs (TikTok) support CORS — XHR works
             await downloadFile(dlUrl, safeName, (prog) => setProgressData(prog));
           } catch (downloadErr) {
             console.warn('XHR download failed, falling back to direct link:', downloadErr);
