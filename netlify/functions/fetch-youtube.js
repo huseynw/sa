@@ -73,13 +73,17 @@ export const handler = async (event, context) => {
         }
       }
 
-      // Do NOT proxy TikTok URLs. Direct CDN link with no-referrer works best.
+      // We CAN proxy tikwm links because they are not IP-locked!
+      // This allows automatic download (XHR) instead of opening a new tab.
+      const filename = isAudioOnly ? `HUSEVN DOWNLOADER - ${safeName}.mp3` : `HUSEVN DOWNLOADER - ${safeName}.${ext}`;
+      const proxyUrl = `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(finalUrl)}&filename=${encodeURIComponent(filename)}&audio=${isAudioOnly}`;
+
       return {
         statusCode: 200,
         headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({
           title: videoTitle,
-          url: finalUrl,
+          url: proxyUrl,
           ext: ext,
           status: "redirect"
         }),
