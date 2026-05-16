@@ -97,60 +97,93 @@ const ResultCard = ({ result, url }) => {
 
       if (!dlUrl) {
         if (platform === 'youtube') {
-          // ─── CLIENT-SIDE YOUTUBE via Invidious ───
-          // Lambda's AWS IPs are blocked by Invidious. Browser residential IP works fine.
           const videoId = extractYtId(url);
           if (!videoId) throw new Error('Yanlış YouTube URL-i');
 
-          const INVIDIOUS = [
-            'https://inv.thepixora.com',
-            'https://invidious.adminforge.de',
-            'https://invidious.fdn.fr',
-            'https://iv.datura.network',
-            'https://invidious.privacydev.net',
-            'https://inv.nadeko.net',
-            'https://invidious.nerdvpn.de',
-            'https://yt.artemislena.eu',
-            'https://invidious.flokinet.to',
-            'https://inv.clip.bike',
-            'https://inv.vern.cc',
-            'https://invidious.lunar.icu',
-            'https://yt.cdaut.de',
-            'https://invidious.tiekoetter.com',
-          ];
+          let cobaltFailed = false;
 
-          const tryInv = async (base) => {
-            const r = await fetch(
-              `${base}/api/v1/videos/${videoId}?fields=title,formatStreams,adaptiveFormats`,
-              { signal: AbortSignal.timeout(6000) }
-            );
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            const d = await r.json();
-            if (!d.title) throw new Error('no title');
-            return { d, base };
-          };
+          // 1. First attempt: Cobalt API (merges audio+video, supports 4K natively)
+          try {
+            console.log('[YouTube] Trying Cobalt API...');
+            const res = await fetch('/.netlify/functions/fetch-info', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url, isAudioOnly: audioOnly, quality: selectedQ, isMuted }),
+            });
+            
+            if (!res.ok) throw new Error(`Cobalt HTTP ${res.status}`);
+            const data = await res.json();
 
-          const { d: invData, base: invBase } = await Promise.any(INVIDIOUS.map(tryInv));
-          console.log('[YouTube] Invidious:', invBase);
+            if (data.error || data.status === 'error') {
+              throw new Error(data.details || data.text || data.error?.code || 'Cobalt API Error');
+            }
 
-          const invTitle = invData.title?.replace(/[^\w\s-]/g, '').trim().substring(0, 60) || 'youtube';
+            if (['stream', 'redirect', 'tunnel', 'youtube_ready'].includes(data.status)) {
+              dlUrl = data.url;
+              if (data.ext) dlExt = data.ext;
+            }
+          } catch (cobaltErr) {
+            console.warn('[YouTube] Cobalt failed. Falling back to Invidious.', cobaltErr);
+            cobaltFailed = true;
+          }
 
-          if (audioOnly) {
-            const fmt = (invData.adaptiveFormats || []).find(f => f.type?.includes('audio/mp4'))
-              || (invData.adaptiveFormats || [])[0];
-            if (!fmt) throw new Error('Audio format tapılmadı');
-            const qs = new URL(fmt.url).search;
-            // Direct Invidious URL — no Lambda proxy (Lambda is blocked by Invidious)
-            dlUrl = `${invBase}/videoplayback${qs}`;
-            dlExt = 'mp3';
-          } else {
-            const fmt = (invData.formatStreams || []).find(f => f.itag === '18')
-              || invData.formatStreams?.[0];
-            if (!fmt) throw new Error('Video format tapılmadı');
-            const qs = new URL(fmt.url).search;
-            // Direct Invidious URL — no Lambda proxy (Lambda is blocked by Invidious)
-            dlUrl = `${invBase}/videoplayback${qs}`;
-            dlExt = 'mp4';
+          // 2. Second attempt: Invidious fallback (bypasses server IP blocks)
+          if (!dlUrl && cobaltFailed) {
+            const INVIDIOUS = [
+              'https://inv.nadeko.net',
+              'https://invidious.nerdvpn.de',
+              'https://yt.artemislena.eu',
+              'https://invidious.flokinet.to',
+              'https://inv.clip.bike',
+              'https://inv.vern.cc',
+              'https://invidious.lunar.icu',
+              'https://yt.cdaut.de',
+              'https://invidious.tiekoetter.com',
+              'https://inv.thepixora.com',
+              'https://invidious.adminforge.de',
+              'https://invidious.fdn.fr',
+              'https://iv.datura.network',
+              'https://invidious.privacydev.net',
+            ];
+
+            const tryInv = async (base) => {
+              const r = await fetch(
+                `${base}/api/v1/videos/${videoId}?fields=title,formatStreams,adaptiveFormats`,
+                { signal: AbortSignal.timeout(6000) }
+              );
+              if (!r.ok) throw new Error('HTTP ' + r.status);
+              const d = await r.json();
+              if (!d.title) throw new Error('no title');
+              return { d, base };
+            };
+
+            let invData, invBase;
+            try {
+              const invResult = await Promise.any(INVIDIOUS.map(tryInv));
+              invData = invResult.d;
+              invBase = invResult.base;
+              console.log('[YouTube] Invidious fallback success:', invBase);
+            } catch (invErr) {
+              throw new Error('Serverlər hazırda məşğuldur. Zəhmət olmasa bir az sonra yenidən cəhd edin.');
+            }
+
+            if (audioOnly) {
+              const fmt = (invData.adaptiveFormats || []).find(f => f.type?.includes('audio/mp4'))
+                || (invData.adaptiveFormats || [])[0];
+              if (!fmt) throw new Error('Audio format tapılmadı');
+              const qs = new URL(fmt.url).search;
+              // Direct Invidious URL
+              dlUrl = `${invBase}/videoplayback${qs}`;
+              dlExt = 'mp3';
+            } else {
+              // Invidious formatStreams max out at 720p (with merged audio).
+              const fmt = (invData.formatStreams || []).find(f => f.itag === '18')
+                || invData.formatStreams?.[0];
+              if (!fmt) throw new Error('Video format tapılmadı');
+              const qs = new URL(fmt.url).search;
+              dlUrl = `${invBase}/videoplayback${qs}`;
+              dlExt = 'mp4';
+            }
           }
 
         } else {
