@@ -304,7 +304,7 @@ function App() {
         <StatsPanel />
         <div className="stats-footer">
           <i className="fa-solid fa-shield-halved" />
-          Bütün statistikalar real vaxt rejimində toplanır · HUSEVN DOWNLOADER © 2025
+          {t('stats_footer')}
         </div>
       </div>
     </>

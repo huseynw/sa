@@ -59,7 +59,15 @@ const i18nConfig = {
         "error_invalid_url": "Please enter a valid URL.",
         "error_fetching": "Error fetching data. Please try again.",
         "speed": "Speed:",
-        "progress": "Progress:"
+        "progress": "Progress:",
+
+        "stats_badge": "Live Statistics",
+        "stats_subtitle": "Real data collected from HUSEVN DOWNLOADER users",
+        "stats_visitors": "Total Visitors",
+        "stats_downloads": "Total Downloads",
+        "stats_platforms": "Active Platforms",
+        "stats_platform_title": "Downloads by Platform",
+        "stats_footer": "All rights reserved · HUSEVN DOWNLOADER © 2026"
       }
     },
     AZ: {
@@ -121,7 +129,15 @@ const i18nConfig = {
         "error_invalid_url": "Zəhmət olmasa düzgün URL daxil edin.",
         "error_fetching": "Məlumat alınarkən xəta baş verdi. Yenidən cəhd edin.",
         "speed": "Sürət:",
-        "progress": "Tərəqqi:"
+        "progress": "Tərəqqi:",
+
+        "stats_badge": "Canlı Statistika",
+        "stats_subtitle": "HUSEVN DOWNLOADER istifadəçilərindən toplanan real məlumatlar",
+        "stats_visitors": "Ümumi Ziyarətçi",
+        "stats_downloads": "Ümumi Yükləmə",
+        "stats_platforms": "Aktif Platforma",
+        "stats_platform_title": "Platforma Üzrə Yükləmələr",
+        "stats_footer": "Bütün hüquqlar qorunur · HUSEVN DOWNLOADER © 2026"
       }
     },
     TR: {
@@ -183,7 +199,15 @@ const i18nConfig = {
         "error_invalid_url": "Lütfen geçerli bir URL girin.",
         "error_fetching": "Veri alınırken hata oluştu. Lütfen tekrar deneyin.",
         "speed": "Hız:",
-        "progress": "İlerleme:"
+        "progress": "İlerleme:",
+
+        "stats_badge": "Canlı İstatistik",
+        "stats_subtitle": "HUSEVN DOWNLOADER kullanıcılarından toplanan gerçek veriler",
+        "stats_visitors": "Toplam Ziyaretçi",
+        "stats_downloads": "Toplam İndirme",
+        "stats_platforms": "Aktif Platform",
+        "stats_platform_title": "Platforma Göre İndirmeler",
+        "stats_footer": "Tüm haklar saklıdır · HUSEVN DOWNLOADER © 2026"
       }
     },
     RU: {
@@ -245,7 +269,15 @@ const i18nConfig = {
         "error_invalid_url": "Пожалуйста, введите правильный URL.",
         "error_fetching": "Ошибка при получении данных. Попробуйте ещё раз.",
         "speed": "Скорость:",
-        "progress": "Прогресс:"
+        "progress": "Прогресс:",
+
+        "stats_badge": "Статистика в реальном времени",
+        "stats_subtitle": "Реальные данные, собранные от пользователей HUSEVN DOWNLOADER",
+        "stats_visitors": "Всего посетителей",
+        "stats_downloads": "Всего загрузок",
+        "stats_platforms": "Активных платформ",
+        "stats_platform_title": "Загрузки по платформам",
+        "stats_footer": "Все права защищены · HUSEVN DOWNLOADER © 2026"
       }
     }
   },

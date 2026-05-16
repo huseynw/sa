@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 /* ── Animated counter hook ── */
 function useCountUp(target, duration = 2000, start = false) {
@@ -39,7 +40,6 @@ function useCountUp(target, duration = 2000, start = false) {
   return value;
 }
 
-
 /* ── Format large numbers ── */
 function formatNumber(n) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -70,7 +70,6 @@ function StatCard({ icon, label, value, color, delay, started }) {
 /* ── Platform row ── */
 function PlatformRow({ icon, label, value, color, maxVal, delay, started }) {
   const animated = useCountUp(value, 2000, started);
-  const pct = maxVal > 0 ? Math.round((value / maxVal) * 100) : 0;
   const animatedPct = maxVal > 0 ? Math.round((animated / maxVal) * 100) : 0;
 
   return (
@@ -97,7 +96,7 @@ function PlatformRow({ icon, label, value, color, maxVal, delay, started }) {
   );
 }
 
-/* ── Main StatsPanel ── */
+/* ── Platform metadata (icons & colors — labels are brand names, no translation needed) ── */
 const PLATFORM_META = [
   { id: 'youtube',   label: 'YouTube',   icon: 'fa-brands fa-youtube',   color: '#ff4444' },
   { id: 'tiktok',    label: 'TikTok',    icon: 'fa-brands fa-tiktok',    color: '#69c9d0' },
@@ -106,7 +105,9 @@ const PLATFORM_META = [
   { id: 'facebook',  label: 'Facebook',  icon: 'fa-brands fa-facebook',  color: '#1877f2' },
 ];
 
+/* ── Main StatsPanel ── */
 export default function StatsPanel() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     totalVisits: 0,
     totalDownloads: 0,
@@ -137,24 +138,22 @@ export default function StatsPanel() {
   const pd = stats?.platformDownloads || {};
   const maxPlatform = Math.max(...PLATFORM_META.map(p => pd[p.id] || 0), 1);
 
-
   return (
     <section ref={panelRef} className="stats-panel">
       {/* Section header */}
       <div className="stats-header">
         <div className="stats-header-badge">
           <span className="stats-live-dot" />
-          Canlı Statistika
+          {t('stats_badge')}
         </div>
-        <h2 className="stats-title">Rəqəmlər Özü Danışır</h2>
-        <p className="stats-subtitle">HUSEVN DOWNLOADER ilə istifadəçilər tərəfindən yüklənmiş məlumatlar</p>
+        <p className="stats-subtitle">{t('stats_subtitle')}</p>
       </div>
 
       {/* Top 3 main metrics */}
       <div className="stats-cards-grid">
         <StatCard
           icon="fa-solid fa-users"
-          label="Ümumi Ziyarətçi"
+          label={t('stats_visitors')}
           value={stats?.totalVisits || 0}
           color="#818cf8"
           delay={0}
@@ -162,7 +161,7 @@ export default function StatsPanel() {
         />
         <StatCard
           icon="fa-solid fa-download"
-          label="Ümumi Yükləmə"
+          label={t('stats_downloads')}
           value={stats?.totalDownloads || 0}
           color="#34d399"
           delay={0.1}
@@ -170,7 +169,7 @@ export default function StatsPanel() {
         />
         <StatCard
           icon="fa-solid fa-globe"
-          label="Aktif Platforma"
+          label={t('stats_platforms')}
           value={5}
           color="#f59e0b"
           delay={0.2}
@@ -187,7 +186,7 @@ export default function StatsPanel() {
       >
         <div className="stats-platforms-header">
           <i className="fa-solid fa-chart-bar" />
-          <span>Platforma Üzrə Yükləmələr</span>
+          <span>{t('stats_platform_title')}</span>
         </div>
         <div className="stats-platforms-list">
           {PLATFORM_META.map((p, i) => (
