@@ -112,34 +112,28 @@ const ResultCard = ({ result, url }) => {
           
           setProgressData({ percent: 5, speed: 'Hazırlanır...' });
           
-          let initData = null;
-          let activeDomain = null;
-          const DOMAINS = ['p.savenow.to', 'p.lbserver.xyz'];
-          
-          for (const d of DOMAINS) {
-            try {
-              const initRes = await fetch(`https://${d}/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`);
-              const data = await initRes.json();
-              if (data.success) {
-                initData = data;
-                activeDomain = d;
-                break;
-              }
-            } catch (err) {
-              console.warn(`[Loader API] Domain ${d} xəta verdi:`, err.message);
-            }
+          // ── Proxy through Netlify function to avoid CORS ──
+          const startRes = await fetch('/.netlify/functions/yt-loader', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'start', url, format }),
+          });
+          const startData = await startRes.json();
+          if (!startData.success) {
+            throw new Error(startData.text || startData.error || 'YouTube yükləmə xətası.');
           }
           
-          if (!initData) {
-            throw new Error('YouTube yükləmə xətası. Serverlər aktiv deyil.');
-          }
-          
-          const jobId = initData.id;
+          const jobId = startData.id;
+          const activeDomain = startData.domain;
           let isComplete = false;
           
           while (!isComplete) {
             await new Promise(r => setTimeout(r, 2000));
-            const progRes = await fetch(`https://${activeDomain}/ajax/progress.php?id=${jobId}`);
+            const progRes = await fetch('/.netlify/functions/yt-loader', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'progress', jobId, domain: activeDomain }),
+            });
             const progData = await progRes.json();
             
             if (progData.success) {
