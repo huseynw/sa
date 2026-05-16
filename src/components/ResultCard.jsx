@@ -112,11 +112,26 @@ const ResultCard = ({ result, url }) => {
           
           setProgressData({ percent: 5, speed: 'Hazırlanır...' });
           
-          const initRes = await fetch(`https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`);
-          const initData = await initRes.json();
+          let initData = null;
+          let activeDomain = null;
+          const DOMAINS = ['p.savenow.to', 'p.lbserver.xyz'];
           
-          if (!initData.success) {
-            throw new Error(initData.text || 'YouTube yükləmə xətası. Yenidən cəhd edin.');
+          for (const d of DOMAINS) {
+            try {
+              const initRes = await fetch(`https://${d}/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`);
+              const data = await initRes.json();
+              if (data.success) {
+                initData = data;
+                activeDomain = d;
+                break;
+              }
+            } catch (err) {
+              console.warn(`[Loader API] Domain ${d} xəta verdi:`, err.message);
+            }
+          }
+          
+          if (!initData) {
+            throw new Error('YouTube yükləmə xətası. Serverlər aktiv deyil.');
           }
           
           const jobId = initData.id;
@@ -124,7 +139,7 @@ const ResultCard = ({ result, url }) => {
           
           while (!isComplete) {
             await new Promise(r => setTimeout(r, 2000));
-            const progRes = await fetch(`https://p.oceansaver.in/ajax/progress.php?id=${jobId}`);
+            const progRes = await fetch(`https://${activeDomain}/ajax/progress.php?id=${jobId}`);
             const progData = await progRes.json();
             
             if (progData.success) {
