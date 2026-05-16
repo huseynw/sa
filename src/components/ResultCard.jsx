@@ -114,6 +114,30 @@ const ResultCard = ({ result, url }) => {
                 window.location.href = rawStreams[qNum].mp4;
                 setDownloading(false);
                 return;
+              } else {
+                setProgressData({ percent: 10, speed: 'Birbaşa link alınır...' });
+                const vIdMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                if (vIdMatch && vIdMatch[1]) {
+                  fetch(`https://inv.thepixora.com/api/v1/videos/${vIdMatch[1]}?fields=adaptiveFormats`)
+                    .then(r => r.json())
+                    .then(d => {
+                      const fmt = d.adaptiveFormats?.find(f => f.type.includes('mp4') && f.qualityLabel?.includes(String(qNum)));
+                      if (fmt && fmt.url) {
+                        window.location.href = fmt.url;
+                      } else {
+                        alert('Xəta: Bu keyfiyyətdə səssiz MP4 tapılmadı. Zəhmət olmasa WEBM səsli variantını yoxlayın.');
+                      }
+                      setDownloading(false);
+                    })
+                    .catch(err => {
+                      console.error(err);
+                      alert('Bağlantı xətası. Alternativ olaraq WEBM səsli variantını seçin.');
+                      setDownloading(false);
+                    });
+                } else {
+                  setDownloading(false);
+                }
+                return;
               }
             }
             else if (selectedQ === '720') format = '720';
@@ -506,13 +530,11 @@ const YoutubeVideoTab = ({ thumbUrl, qualities, rawStreams, selectedQ, setSelect
                     onClick={() => setSelectedQ(`${q}_webm`)}>
                     {QUALITY_LABELS[q] || `${q}p`} (WEBM, {t('with_audio') || 'Səsli'})
                   </button>
-                  {rawStreams && rawStreams[q] && rawStreams[q].mp4 && (
-                    <button
+                  <button
                       className={`quality-pill ${selectedQ === `${q}_mp4_silent` ? 'selected yt' : ''}`}
                       onClick={() => setSelectedQ(`${q}_mp4_silent`)}>
                       {QUALITY_LABELS[q] || `${q}p`} (MP4, {t('no_audio') || 'Səssiz'})
                     </button>
-                  )}
                 </React.Fragment>
               ))}
             </div>
