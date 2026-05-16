@@ -134,10 +134,18 @@ const ResultCard = ({ result, url }) => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'progress', jobId, domain: activeDomain }),
             });
-            const progData = await progRes.json();
+            const progRaw = await progRes.text();
+            console.log('[Progress raw]', progRes.status, progRaw.substring(0, 200));
             
-            if (progData.success) {
-              const p = Math.max(10, Math.round(progData.progress / 10));
+            let progData;
+            try { progData = JSON.parse(progRaw); } catch(e) { throw new Error('API cavabı JSON deyil: ' + progRaw.substring(0, 100)); }
+            
+            if (!progRes.ok) {
+              throw new Error(progData.error || `Serverden ${progRes.status} xetası geldi`);
+            }
+
+            if (progData.success || progData.progress) {
+              const p = Math.max(10, Math.round((progData.progress || 0) / 10));
               setProgressData({ percent: p, speed: progData.text || 'Konvertasiya edilir...' });
               if (progData.progress === 1000) {
                 dlUrl = progData.download_url;
@@ -145,7 +153,7 @@ const ResultCard = ({ result, url }) => {
                 isComplete = true;
               }
             } else {
-              throw new Error('Konvertasiya xətası baş verdi.');
+              throw new Error(progData.text || progData.error || progData.message || 'Konvertasiya xətası baş verdi.');
             }
           }
 
