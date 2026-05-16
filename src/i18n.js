@@ -77,7 +77,9 @@ const i18nConfig = {
         "feedback_submit": "Send Message",
         "feedback_sending": "Sending...",
         "feedback_success": "Thank you! Your message has been sent.",
-        "feedback_error": "Error sending message. Please try again."
+        "feedback_error": "Error sending message. Please try again.",
+        "with_audio": "With Audio",
+        "no_audio": "No Audio"
       }
     },
     AZ: {
@@ -157,7 +159,9 @@ const i18nConfig = {
         "feedback_submit": "Mesajı Göndər",
         "feedback_sending": "Göndərilir...",
         "feedback_success": "Təşəkkürlər! Mesajınız göndərildi.",
-        "feedback_error": "Göndərilərkən xəta baş verdi. Yenidən cəhd edin."
+        "feedback_error": "Göndərilərkən xəta baş verdi. Yenidən cəhd edin.",
+        "with_audio": "Səsli",
+        "no_audio": "Səssiz"
       }
     },
     TR: {
@@ -237,7 +241,9 @@ const i18nConfig = {
         "feedback_submit": "Mesajı Gönder",
         "feedback_sending": "Gönderiliyor...",
         "feedback_success": "Teşekkürler! Mesajınız gönderildi.",
-        "feedback_error": "Gönderilirken hata oluştu. Lütfen tekrar deneyin."
+        "feedback_error": "Gönderilirken hata oluştu. Lütfen tekrar deneyin.",
+        "with_audio": "Sesli",
+        "no_audio": "Sessiz"
       }
     },
     RU: {
@@ -317,7 +323,9 @@ const i18nConfig = {
         "feedback_submit": "Отправить",
         "feedback_sending": "Отправка...",
         "feedback_success": "Спасибо! Ваше сообщение отправлено.",
-        "feedback_error": "Ошибка при отправке. Пожалуйста, попробуйте еще раз."
+        "feedback_error": "Ошибка при отправке. Пожалуйста, попробуйте еще раз.",
+        "with_audio": "Со звуком",
+        "no_audio": "Без звука"
       }
     }
   },

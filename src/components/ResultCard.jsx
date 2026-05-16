@@ -46,6 +46,7 @@ const ResultCard = ({ result, url }) => {
   /* quality */
   const [qualities, setQualities] = useState(null);   // null = loading, [] = failed/fallback
   const [selectedQ, setSelectedQ] = useState('max');
+  const [rawStreams, setRawStreams] = useState({});
 
   /* mute toggle (TikTok) */
   const [muted, setMuted] = useState(false);
@@ -70,11 +71,14 @@ const ResultCard = ({ result, url }) => {
       .then(d => {
         const list = (d.qualities || ALL_QUALITIES).sort((a, b) => a - b);
         setQualities(list);
-        setSelectedQ(String(list[list.length - 1]));
+        setRawStreams(d.rawStreams || {});
+        const std = list.filter(q => q <= 1080);
+        setSelectedQ(String(std.length > 0 ? std[std.length - 1] : list[list.length - 1]));
       })
       .catch(() => {
         setQualities(ALL_QUALITIES);
-        setSelectedQ('max');
+        setRawStreams({});
+        setSelectedQ('1080');
       });
   }, [url, platform]);
 
@@ -103,11 +107,19 @@ const ResultCard = ({ result, url }) => {
             format = 'mp3';
           } else {
             if (selectedQ === 'max' || selectedQ === '1080') format = '1080';
-            else if (selectedQ === '2160') format = '4k';
-            else if (selectedQ === '1440') format = '1440';
+            else if (selectedQ.endsWith('_webm')) format = '8k';
+            else if (selectedQ.endsWith('_mp4_silent')) {
+              const qNum = parseInt(selectedQ.split('_')[0]);
+              if (rawStreams[qNum] && rawStreams[qNum].mp4) {
+                window.location.href = rawStreams[qNum].mp4;
+                setDownloading(false);
+                return;
+              }
+            }
             else if (selectedQ === '720') format = '720';
             else if (selectedQ === '480') format = '480';
             else if (selectedQ === '360' || selectedQ === '240' || selectedQ === '144') format = '360';
+            else format = '1080';
           }
           
           setProgressData({ percent: 5, speed: 'Hazırlanır...' });
@@ -460,8 +472,11 @@ const YoutubeMP3Tab = ({ thumbUrl, downloading, onDownload, btnCls }) => {
   </div>
 );};
 
-const YoutubeVideoTab = ({ thumbUrl, qualities, selectedQ, setSelectedQ, downloading, onDownload, btnCls }) => {
+const YoutubeVideoTab = ({ thumbUrl, qualities, rawStreams, selectedQ, setSelectedQ, downloading, onDownload, btnCls }) => {
   const { t } = useTranslation();
+  const stdQualities = qualities ? qualities.filter(q => q <= 1080) : [];
+  const highQualities = qualities ? qualities.filter(q => q > 1080) : [];
+
   return (
   <div>
     {qualities === null ? (
@@ -470,16 +485,40 @@ const YoutubeVideoTab = ({ thumbUrl, qualities, selectedQ, setSelectedQ, downloa
         {t('qualities_loading')}
       </div>
     ) : (
-      <div className="quality-row">
-        <button className={`quality-pill max yt ${selectedQ === 'max' ? 'selected yt' : ''}`}
-          onClick={() => setSelectedQ('max')}>{t('quality_max')}</button>
-        {qualities.map(q => (
-          <button key={q}
-            className={`quality-pill ${selectedQ === String(q) ? 'selected yt' : ''}`}
-            onClick={() => setSelectedQ(String(q))}>
-            {QUALITY_LABELS[q] || `${q}p`}
-          </button>
-        ))}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="quality-row">
+          {stdQualities.map(q => (
+            <button key={q}
+              className={`quality-pill ${selectedQ === String(q) ? 'selected yt' : ''}`}
+              onClick={() => setSelectedQ(String(q))}>
+              {QUALITY_LABELS[q] || `${q}p`} (MP4, {t('with_audio') || 'Səsli'})
+            </button>
+          ))}
+        </div>
+        {highQualities.length > 0 && (
+          <div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text2)', marginBottom: '8px', fontWeight: 600 }}>2K / 4K Seçimləri (Yüksək Keyfiyyət):</div>
+            <div className="quality-row">
+              {highQualities.map(q => (
+                <React.Fragment key={q}>
+                  <button
+                    className={`quality-pill ${selectedQ === `${q}_webm` ? 'selected yt' : ''}`}
+                    onClick={() => setSelectedQ(`${q}_webm`)}>
+                    {QUALITY_LABELS[q] || `${q}p`} (WEBM, {t('with_audio') || 'Səsli'})
+                  </button>
+                  {rawStreams && rawStreams[q] && rawStreams[q].mp4 && (
+                    <button
+                      className={`quality-pill ${selectedQ === `${q}_mp4_silent` ? 'selected yt' : ''}`}
+                      onClick={() => setSelectedQ(`${q}_mp4_silent`)}>
+                      {QUALITY_LABELS[q] || `${q}p`} (MP4, {t('no_audio') || 'Səssiz'})
+                    </button>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text3)', marginTop: '4px' }}>* iPhone-larda WEBM dəstəklənməyə bilər, zəhmət olmasa MP4 (1080p) yükləyin.</p>
+          </div>
+        )}
       </div>
     )}
     <div className="divider" />

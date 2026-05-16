@@ -47,6 +47,7 @@ export const handler = async (event) => {
         const data = await resp.json();
 
         const qualitySet = new Set();
+        const rawStreams = {};
 
         (data.formatStreams || []).forEach(f => {
           const m = (f.qualityLabel || '').match(/(\d+)/);
@@ -56,7 +57,13 @@ export const handler = async (event) => {
         (data.adaptiveFormats || []).forEach(f => {
           if ((f.type || '').startsWith('video/')) {
             const m = (f.qualityLabel || '').match(/(\d+)/);
-            if (m) qualitySet.add(parseInt(m[1]));
+            if (m) {
+              const q = parseInt(m[1]);
+              qualitySet.add(q);
+              if (!rawStreams[q]) rawStreams[q] = {};
+              if (f.type.includes('mp4')) rawStreams[q].mp4 = f.url;
+              if (f.type.includes('webm')) rawStreams[q].webm = f.url;
+            }
           }
         });
 
@@ -68,7 +75,7 @@ export const handler = async (event) => {
           return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ qualities, videoId }),
+            body: JSON.stringify({ qualities, videoId, rawStreams }),
           };
         }
       } catch {
@@ -79,13 +86,13 @@ export const handler = async (event) => {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ qualities: DEFAULT_QUALITIES, fallback: true }),
+      body: JSON.stringify({ qualities: DEFAULT_QUALITIES, fallback: true, rawStreams: {} }),
     };
   } catch (err) {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ qualities: DEFAULT_QUALITIES, fallback: true }),
+      body: JSON.stringify({ qualities: DEFAULT_QUALITIES, fallback: true, rawStreams: {} }),
     };
   }
 };
