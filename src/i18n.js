@@ -67,7 +67,17 @@ const i18nConfig = {
         "stats_downloads": "Total Downloads",
         "stats_platforms": "Active Platforms",
         "stats_platform_title": "Downloads by Platform",
-        "stats_footer": "All rights reserved · HUSEVN DOWNLOADER © 2026"
+        "stats_footer": "All rights reserved · HUSEVN DOWNLOADER © 2026",
+
+        "feedback_title": "Feedback & Suggestions",
+        "feedback_desc": "Have an idea or found a bug? Let us know!",
+        "feedback_type_complaint": "Complaint",
+        "feedback_type_suggestion": "Suggestion",
+        "feedback_placeholder": "Write your message here...",
+        "feedback_submit": "Send Message",
+        "feedback_sending": "Sending...",
+        "feedback_success": "Thank you! Your message has been sent.",
+        "feedback_error": "Error sending message. Please try again."
       }
     },
     AZ: {
@@ -137,7 +147,17 @@ const i18nConfig = {
         "stats_downloads": "Ümumi Yükləmə",
         "stats_platforms": "Aktif Platforma",
         "stats_platform_title": "Platforma Üzrə Yükləmələr",
-        "stats_footer": "Bütün hüquqlar qorunur · HUSEVN DOWNLOADER © 2026"
+        "stats_footer": "Bütün hüquqlar qorunur · HUSEVN DOWNLOADER © 2026",
+
+        "feedback_title": "Şikayət və Təkliflər",
+        "feedback_desc": "Fikriniz var və ya xəta tapdınız? Bizə bildirin!",
+        "feedback_type_complaint": "Şikayət",
+        "feedback_type_suggestion": "Təklif",
+        "feedback_placeholder": "Mesajınızı bura yazın...",
+        "feedback_submit": "Mesajı Göndər",
+        "feedback_sending": "Göndərilir...",
+        "feedback_success": "Təşəkkürlər! Mesajınız göndərildi.",
+        "feedback_error": "Göndərilərkən xəta baş verdi. Yenidən cəhd edin."
       }
     },
     TR: {
@@ -207,7 +227,17 @@ const i18nConfig = {
         "stats_downloads": "Toplam İndirme",
         "stats_platforms": "Aktif Platform",
         "stats_platform_title": "Platforma Göre İndirmeler",
-        "stats_footer": "Tüm haklar saklıdır · HUSEVN DOWNLOADER © 2026"
+        "stats_footer": "Tüm haklar saklıdır · HUSEVN DOWNLOADER © 2026",
+
+        "feedback_title": "Şikayet ve Öneriler",
+        "feedback_desc": "Bir fikriniz mi var veya hata mı buldunuz? Bize bildirin!",
+        "feedback_type_complaint": "Şikayet",
+        "feedback_type_suggestion": "Öneri",
+        "feedback_placeholder": "Mesajınızı buraya yazın...",
+        "feedback_submit": "Mesajı Gönder",
+        "feedback_sending": "Gönderiliyor...",
+        "feedback_success": "Teşekkürler! Mesajınız gönderildi.",
+        "feedback_error": "Gönderilirken hata oluştu. Lütfen tekrar deneyin."
       }
     },
     RU: {
@@ -277,7 +307,17 @@ const i18nConfig = {
         "stats_downloads": "Всего загрузок",
         "stats_platforms": "Активных платформ",
         "stats_platform_title": "Загрузки по платформам",
-        "stats_footer": "Все права защищены · HUSEVN DOWNLOADER © 2026"
+        "stats_footer": "Все права защищены · HUSEVN DOWNLOADER © 2026",
+
+        "feedback_title": "Жалобы и предложения",
+        "feedback_desc": "Есть идея или нашли ошибку? Дайте нам знать!",
+        "feedback_type_complaint": "Жалоба",
+        "feedback_type_suggestion": "Предложение",
+        "feedback_placeholder": "Напишите ваше сообщение здесь...",
+        "feedback_submit": "Отправить",
+        "feedback_sending": "Отправка...",
+        "feedback_success": "Спасибо! Ваше сообщение отправлено.",
+        "feedback_error": "Ошибка при отправке. Пожалуйста, попробуйте еще раз."
       }
     }
   },

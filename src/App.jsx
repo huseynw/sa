@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Header from './components/Header';
 import ResultCard from './components/ResultCard';
 import StatsPanel from './components/StatsPanel';
+import FeedbackForm from './components/FeedbackForm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
@@ -298,6 +299,11 @@ function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* ── Feedback Form ── */}
+      <div style={{ padding: '0 20px', position: 'relative', zIndex: 1, maxWidth: '800px', margin: '0 auto 40px auto' }}>
+        <FeedbackForm />
+      </div>
 
       {/* ── Stats Panel (site footer area) ── */}
       <div style={{ padding: '0 20px 80px', position: 'relative', zIndex: 1 }}>
