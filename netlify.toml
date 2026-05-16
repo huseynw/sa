@@ -12,6 +12,11 @@
   included_files       = ["node_modules/youtube-dl-exec/bin/**", "cookies.txt"]
 
 [[redirects]]
+  from   = "/api/stats"
+  to     = "/.netlify/functions/stats"
+  status = 200
+
+[[redirects]]
   from   = "/*"
   to     = "/index.html"
   status = 200

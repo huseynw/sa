@@ -33,7 +33,7 @@ const ALL_QUALITIES = [144, 240, 360, 480, 720, 1080, 1440, 2160];
 const QUALITY_LABELS = { 144:'144p', 240:'240p', 360:'360p', 480:'480p', 720:'720p', 1080:'1080p', 1440:'1440p (2K)', 2160:'2160p (4K)' };
 
 /* ────────────────────────────────── */
-const ResultCard = ({ result, url }) => {
+const ResultCard = ({ result, url, onDownload }) => {
   const { t } = useTranslation();
   const platform = detectPlatform(url);
   const meta = platformMeta[platform] || platformMeta.generic;
@@ -263,6 +263,10 @@ const ResultCard = ({ result, url }) => {
     } finally {
       setDownloading(false);
       setTimeout(() => setProgressData(null), 2000);
+      // Track download stat (fire-and-forget, only if no error thrown)
+      if (onDownload) {
+        try { onDownload(platform); } catch {}
+      }
     }
   };
 

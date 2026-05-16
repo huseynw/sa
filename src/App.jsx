@@ -1,8 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Header from './components/Header';
 import ResultCard from './components/ResultCard';
+import StatsPanel from './components/StatsPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+
+/* ── Stats API helper ── */
+const trackStat = (action, platform) => {
+  fetch('/api/stats', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, platform }),
+  }).catch(() => {}); // fire-and-forget, errors silently ignored
+};
 
 /* ── Looping Typewriter Title ── */
 const TYPEWRITER_PHRASES = [
@@ -94,6 +104,20 @@ const PIB_CLS = { youtube: 'pib-yt', tiktok: 'pib-tt', instagram: 'pib-ig', pint
 function App() {
   const { t } = useTranslation();
   const platforms = PLATFORMS(t);
+
+  /* Track page visit once */
+  const visitTracked = useRef(false);
+  useEffect(() => {
+    if (!visitTracked.current) {
+      visitTracked.current = true;
+      trackStat('visit');
+    }
+  }, []);
+
+  /* Download tracker — passed down to ResultCard */
+  const handleDownloadTracked = useCallback((platform) => {
+    trackStat('download', platform);
+  }, []);
 
   const [activePlatform, setActivePlatform] = useState(platforms[0]);
   const [urls,     setUrls]     = useState({});
@@ -255,7 +279,7 @@ function App() {
             <AnimatePresence>
               {result && (
                 <div className={`result-card result-card-platform ${activePFull.cls}`}>
-                  <ResultCard result={result} url={url} />
+                  <ResultCard result={result} url={url} onDownload={handleDownloadTracked} />
                 </div>
               )}
             </AnimatePresence>
@@ -274,6 +298,15 @@ function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* ── Stats Panel (site footer area) ── */}
+      <div style={{ padding: '0 20px 80px', position: 'relative', zIndex: 1 }}>
+        <StatsPanel />
+        <div className="stats-footer">
+          <i className="fa-solid fa-shield-halved" />
+          Bütün statistikalar real vaxt rejimində toplanır · HUSEVN DOWNLOADER © 2025
+        </div>
+      </div>
     </>
   );
 }
