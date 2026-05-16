@@ -226,8 +226,10 @@ const ResultCard = ({ result, url, onDownload }) => {
           } catch (ytErr) {
             // CORS blocked — open directly in new tab (user can right-click → save as)
             console.warn('Direct Invidious fetch failed, opening in new tab:', ytErr.message);
+            if (onDownload) { try { onDownload(platform); } catch {} }
             window.open(dlUrl, '_blank', 'noreferrer');
           }
+          if (onDownload) { try { onDownload(platform); } catch {} }
           setDownloading(false);
 
         } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
@@ -239,12 +241,14 @@ const ResultCard = ({ result, url, onDownload }) => {
           a.rel = 'noreferrer';
           a.referrerPolicy = 'no-referrer';
           document.body.appendChild(a);
+          if (onDownload) { try { onDownload(platform); } catch {} }
           a.click();
           document.body.removeChild(a);
           setDownloading(false);
         } else {
           try {
             // Invidious proxy URLs (YouTube) and tikwm proxy URLs (TikTok) support CORS — XHR works
+            if (onDownload) { try { onDownload(platform); } catch {} }
             await downloadFile(dlUrl, safeName, (prog) => setProgressData(prog));
           } catch (downloadErr) {
             console.warn('XHR download failed, falling back to direct link:', downloadErr);
@@ -263,10 +267,6 @@ const ResultCard = ({ result, url, onDownload }) => {
     } finally {
       setDownloading(false);
       setTimeout(() => setProgressData(null), 2000);
-      // Track download stat (fire-and-forget, only if no error thrown)
-      if (onDownload) {
-        try { onDownload(platform); } catch {}
-      }
     }
   };
 
@@ -280,6 +280,7 @@ const ResultCard = ({ result, url, onDownload }) => {
     setDownloading(true);
     setProgressData({ percent: 0, speed: 0 });
     const baseName = getBaseName();
+    if (onDownload) { try { onDownload(platform); } catch {} }
     for (let i = 0; i < selectedImgs.length; i++) {
       // Simulate progress for multi-image
       setProgressData({ percent: Math.round((i / selectedImgs.length) * 100), speed: 0 });
@@ -370,7 +371,7 @@ const ResultCard = ({ result, url, onDownload }) => {
           />
         )}
         {platform === 'youtube' && activeTab === 'thumbnail' && (
-          <YoutubeThumbnailTab videoId={extractYtId(url)} title={result?.previewMeta?.title || 'thumbnail'} btnCls={meta.btnCls} />
+          <YoutubeThumbnailTab videoId={extractYtId(url)} title={result?.previewMeta?.title || 'thumbnail'} btnCls={meta.btnCls} onDownloadStats={() => { if (onDownload) { try { onDownload('youtube'); } catch {} } }} />
         )}
 
 
@@ -617,7 +618,7 @@ const GalleryTab = ({ items, selectedImgs, toggleImg, downloading, onDownloadSel
   </div>
 );};
 
-const YoutubeThumbnailTab = ({ videoId, title, btnCls }) => {
+const YoutubeThumbnailTab = ({ videoId, title, btnCls, onDownloadStats }) => {
   const QUALITIES = [
     { id: 'maxresdefault', label: 'Max HD', desc: '1280×720' },
     { id: 'sddefault',     label: 'SD',     desc: '640×480' },
@@ -647,6 +648,7 @@ const YoutubeThumbnailTab = ({ videoId, title, btnCls }) => {
       a.href = blobUrl;
       a.download = filename;
       document.body.appendChild(a);
+      if (onDownloadStats) { try { onDownloadStats(); } catch {} }
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
