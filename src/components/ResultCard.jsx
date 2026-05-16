@@ -206,21 +206,11 @@ const ResultCard = ({ result, url }) => {
         const safeName = `${getBaseName()}.${dlExt}`;
 
         if (platform === 'youtube') {
-          // For loader.to CDN URLs: try anchor click first.
-          // a.download only works same-origin; for cross-origin we open in a new tab.
-          // The CDN server sends Content-Disposition: attachment so window.open triggers download.
-          try {
-            const a = document.createElement('a');
-            a.href = dlUrl;
-            a.download = safeName;
-            a.target = '_blank';
-            a.rel = 'noreferrer';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          } catch(e) {
-            window.open(dlUrl, '_blank', 'noreferrer');
-          }
+          // CDN server sends Content-Disposition: attachment, so navigating to the URL
+          // triggers a download on all platforms.
+          // window.location.href is NOT blocked by iOS Safari popup blockers (unlike a.click() from async code).
+          setProgressData({ percent: 100, speed: 'Yüklənir...' });
+          window.location.href = dlUrl;
 
         } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
           // Raw TikTok CDN links often block XHR via CORS. Opening them directly works!
