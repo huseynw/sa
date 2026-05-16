@@ -122,13 +122,15 @@ const ResultCard = ({ result, url }) => {
           if (!startData.success) {
             throw new Error(startData.text || startData.error || 'YouTube yükləmə xətası.');
           }
-          
           const jobId = startData.id;
           const activeDomain = startData.domain;
           let isComplete = false;
+          let pollCount = 0;
+          const MAX_POLLS = 90; // 90 x 2s = 3 dəqiqə maksimum
           
-          while (!isComplete) {
+          while (!isComplete && pollCount < MAX_POLLS) {
             await new Promise(r => setTimeout(r, 2000));
+            pollCount++;
             const progRes = await fetch('/.netlify/functions/yt-loader', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -141,12 +143,13 @@ const ResultCard = ({ result, url }) => {
             try { progData = JSON.parse(progRaw); } catch(e) { throw new Error('API cavabı JSON deyil: ' + progRaw.substring(0, 100)); }
             
             if (!progRes.ok) {
-              throw new Error(progData.error || `Serverden ${progRes.status} xetası geldi`);
+              throw new Error(progData.error || `Serverden ${progRes.status} xətası geldi`);
             }
 
             if (progData.success || progData.progress) {
               const p = Math.max(10, Math.round((progData.progress || 0) / 10));
-              setProgressData({ percent: p, speed: progData.text || 'Konvertasiya edilir...' });
+              const statusText = progData.text ? `${progData.text} (${pollCount}/${MAX_POLLS})` : 'Konvertasiya edilir...';
+              setProgressData({ percent: p, speed: statusText });
               if (progData.progress === 1000) {
                 dlUrl = progData.download_url;
                 dlExt = audioOnly ? 'mp3' : 'mp4';
@@ -155,6 +158,10 @@ const ResultCard = ({ result, url }) => {
             } else {
               throw new Error(progData.text || progData.error || progData.message || 'Konvertasiya xətası baş verdi.');
             }
+          }
+          
+          if (!isComplete) {
+            throw new Error('Video konvertasiyası vaxt aşdı. Farklı keyfiyyət səyin.');
           }
 
         } else {
@@ -199,13 +206,21 @@ const ResultCard = ({ result, url }) => {
         const safeName = `${getBaseName()}.${dlExt}`;
 
         if (platform === 'youtube') {
-          // ─── Direct Browser Download for Loader.to ───
-          const a = document.createElement('a');
-          a.href = dlUrl;
-          a.download = safeName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          // For loader.to CDN URLs: try anchor click first.
+          // a.download only works same-origin; for cross-origin we open in a new tab.
+          // The CDN server sends Content-Disposition: attachment so window.open triggers download.
+          try {
+            const a = document.createElement('a');
+            a.href = dlUrl;
+            a.download = safeName;
+            a.target = '_blank';
+            a.rel = 'noreferrer';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          } catch(e) {
+            window.open(dlUrl, '_blank', 'noreferrer');
+          }
 
         } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
           // Raw TikTok CDN links often block XHR via CORS. Opening them directly works!
