@@ -108,46 +108,6 @@ const ResultCard = ({ result, url }) => {
           } else {
             if (selectedQ === 'max' || selectedQ === '1080') format = '1080';
             else if (selectedQ.endsWith('_webm')) format = '8k';
-            else if (selectedQ.endsWith('_mp4_silent')) {
-              const qNum = parseInt(selectedQ.split('_')[0]);
-              if (rawStreams[qNum] && rawStreams[qNum].mp4) {
-                window.location.href = rawStreams[qNum].mp4;
-                setDownloading(false);
-                return;
-              } else {
-                // No pre-fetched stream: try Invidious instances
-                setProgressData({ percent: 5, speed: 'Birbaşa link axtarlır...' });
-                const vidMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-                if (vidMatch && vidMatch[1]) {
-                  const invInstances = [
-                    'https://invidious.nerdvpn.de',
-                    'https://inv.nadeko.net',
-                    'https://yt.cdaut.de',
-                    'https://invidious.privacyredirect.com',
-                  ];
-                  let foundUrl = null;
-                  for (const inst of invInstances) {
-                    try {
-                      const r = await fetch(`${inst}/api/v1/videos/${vidMatch[1]}?fields=adaptiveFormats`, { signal: AbortSignal.timeout(6000) });
-                      if (!r.ok) continue;
-                      const d = await r.json();
-                      const fmt = d.adaptiveFormats?.find(f =>
-                        f.type?.includes('mp4') && (f.qualityLabel?.includes(`${qNum}`) || f.qualityLabel?.startsWith(`${qNum}p`))
-                      );
-                      if (fmt?.url) { foundUrl = fmt.url; break; }
-                    } catch(e) { continue; }
-                  }
-                  if (foundUrl) {
-                    window.location.href = foundUrl;
-                    setDownloading(false);
-                    return;
-                  }
-                }
-                // All Invidious failed - fall through to loader.to 8k (WEBM)
-                format = '8k';
-                dlExt = 'webm';
-              }
-            }
             else if (selectedQ === '720') format = '720';
             else if (selectedQ === '480') format = '480';
             else if (selectedQ === '360' || selectedQ === '240' || selectedQ === '144') format = '360';
@@ -541,11 +501,6 @@ const YoutubeVideoTab = ({ thumbUrl, qualities, rawStreams, selectedQ, setSelect
                     onClick={() => setSelectedQ(`${q}_webm`)}>
                     {QUALITY_LABELS[q] || `${q}p`} (WEBM, {t('with_audio') || 'Səsli'})
                   </button>
-                  <button
-                      className={`quality-pill ${selectedQ === `${q}_mp4_silent` ? 'selected yt' : ''}`}
-                      onClick={() => setSelectedQ(`${q}_mp4_silent`)}>
-                      {QUALITY_LABELS[q] || `${q}p`} (MP4, {t('no_audio') || 'Səssiz'})
-                    </button>
                 </React.Fragment>
               ))}
             </div>
