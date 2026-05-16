@@ -115,11 +115,6 @@ function App() {
     }
   }, []);
 
-  /* Download tracker — passed down to ResultCard */
-  const handleDownloadTracked = useCallback((platform) => {
-    trackStat('download', platform);
-  }, []);
-
   const [activePlatform, setActivePlatform] = useState(platforms[0]);
   const [urls,     setUrls]     = useState({});
   const [results,  setResults]  = useState({});
@@ -147,6 +142,10 @@ function App() {
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!url.trim()) return;
+    
+    // Yükləmə statistikasını Axtar düyməsinə basılanda artır
+    trackStat('download', pid);
+
     try {
       setLoad(true);
       setResult(null);
@@ -280,7 +279,7 @@ function App() {
             <AnimatePresence>
               {result && (
                 <div className={`result-card result-card-platform ${activePFull.cls}`}>
-                  <ResultCard result={result} url={url} onDownload={handleDownloadTracked} />
+                  <ResultCard result={result} url={url} />
                 </div>
               )}
             </AnimatePresence>
