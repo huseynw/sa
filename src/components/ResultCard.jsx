@@ -97,92 +97,46 @@ const ResultCard = ({ result, url }) => {
 
       if (!dlUrl) {
         if (platform === 'youtube') {
-          const videoId = extractYtId(url);
-          if (!videoId) throw new Error('Yanlış YouTube URL-i');
-
-          let cobaltFailed = false;
-
-          // 1. First attempt: Cobalt API (merges audio+video, supports 4K natively)
-          try {
-            console.log('[YouTube] Trying Cobalt API...');
-            const res = await fetch('/.netlify/functions/fetch-info', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url, isAudioOnly: audioOnly, quality: selectedQ, isMuted }),
-            });
-            
-            if (!res.ok) throw new Error(`Cobalt HTTP ${res.status}`);
-            const data = await res.json();
-
-            if (data.error || data.status === 'error') {
-              throw new Error(data.details || data.text || data.error?.code || 'Cobalt API Error');
-            }
-
-            if (['stream', 'redirect', 'tunnel', 'youtube_ready'].includes(data.status)) {
-              dlUrl = data.url;
-              if (data.ext) dlExt = data.ext;
-            }
-          } catch (cobaltErr) {
-            console.warn('[YouTube] Cobalt failed. Falling back to Invidious.', cobaltErr);
-            cobaltFailed = true;
+          // ─── LOADER.TO API (TAMAMİLƏ YENİ, COBALT VƏ INVIDIOUS YOXDUR) ───
+          let format = '720';
+          if (audioOnly) {
+            format = 'mp3';
+          } else {
+            if (selectedQ === 'max' || selectedQ === '1080') format = '1080';
+            else if (selectedQ === '2160') format = '4k';
+            else if (selectedQ === '1440') format = '1440';
+            else if (selectedQ === '720') format = '720';
+            else if (selectedQ === '480') format = '480';
+            else if (selectedQ === '360' || selectedQ === '240' || selectedQ === '144') format = '360';
           }
-
-          // 2. Second attempt: Invidious fallback (bypasses server IP blocks)
-          if (!dlUrl && cobaltFailed) {
-            const INVIDIOUS = [
-              'https://inv.nadeko.net',
-              'https://invidious.nerdvpn.de',
-              'https://yt.artemislena.eu',
-              'https://invidious.flokinet.to',
-              'https://inv.clip.bike',
-              'https://inv.vern.cc',
-              'https://invidious.lunar.icu',
-              'https://yt.cdaut.de',
-              'https://invidious.tiekoetter.com',
-              'https://inv.thepixora.com',
-              'https://invidious.adminforge.de',
-              'https://invidious.fdn.fr',
-              'https://iv.datura.network',
-              'https://invidious.privacydev.net',
-            ];
-
-            const tryInv = async (base) => {
-              const r = await fetch(
-                `${base}/api/v1/videos/${videoId}?fields=title,formatStreams,adaptiveFormats`,
-                { signal: AbortSignal.timeout(6000) }
-              );
-              if (!r.ok) throw new Error('HTTP ' + r.status);
-              const d = await r.json();
-              if (!d.title) throw new Error('no title');
-              return { d, base };
-            };
-
-            let invData, invBase;
-            try {
-              const invResult = await Promise.any(INVIDIOUS.map(tryInv));
-              invData = invResult.d;
-              invBase = invResult.base;
-              console.log('[YouTube] Invidious fallback success:', invBase);
-            } catch (invErr) {
-              throw new Error('Serverlər hazırda məşğuldur. Zəhmət olmasa bir az sonra yenidən cəhd edin.');
-            }
-
-            if (audioOnly) {
-              const fmt = (invData.adaptiveFormats || []).find(f => f.type?.includes('audio/mp4'))
-                || (invData.adaptiveFormats || [])[0];
-              if (!fmt) throw new Error('Audio format tapılmadı');
-              const qs = new URL(fmt.url).search;
-              // Direct Invidious URL
-              dlUrl = `${invBase}/videoplayback${qs}`;
-              dlExt = 'mp3';
+          
+          setProgressData({ percent: 5, speed: 'Hazırlanır...' });
+          
+          const initRes = await fetch(`https://p.oceansaver.in/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`);
+          const initData = await initRes.json();
+          
+          if (!initData.success) {
+            throw new Error(initData.text || 'YouTube yükləmə xətası. Yenidən cəhd edin.');
+          }
+          
+          const jobId = initData.id;
+          let isComplete = false;
+          
+          while (!isComplete) {
+            await new Promise(r => setTimeout(r, 2000));
+            const progRes = await fetch(`https://p.oceansaver.in/ajax/progress.php?id=${jobId}`);
+            const progData = await progRes.json();
+            
+            if (progData.success) {
+              const p = Math.max(10, Math.round(progData.progress / 10));
+              setProgressData({ percent: p, speed: progData.text || 'Konvertasiya edilir...' });
+              if (progData.progress === 1000) {
+                dlUrl = progData.download_url;
+                dlExt = audioOnly ? 'mp3' : 'mp4';
+                isComplete = true;
+              }
             } else {
-              // Invidious formatStreams max out at 720p (with merged audio).
-              const fmt = (invData.formatStreams || []).find(f => f.itag === '18')
-                || invData.formatStreams?.[0];
-              if (!fmt) throw new Error('Video format tapılmadı');
-              const qs = new URL(fmt.url).search;
-              dlUrl = `${invBase}/videoplayback${qs}`;
-              dlExt = 'mp4';
+              throw new Error('Konvertasiya xətası baş verdi.');
             }
           }
 
@@ -227,41 +181,14 @@ const ResultCard = ({ result, url }) => {
         }
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        if (platform === 'youtube' && dlUrl.includes('/videoplayback')) {
-          // ─── Direct Invidious blob download (no Lambda proxy needed) ───
-          // Invidious `/videoplayback` is accessible from browser residential IPs.
-          // Lambda is blocked, so we download entirely client-side via fetch → blob → anchor.
-          try {
-            const response = await fetch(dlUrl);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const contentLength = parseInt(response.headers.get('content-length') || '0');
-            const reader = response.body.getReader();
-            const chunks = [];
-            let loaded = 0;
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              chunks.push(value);
-              loaded += value.length;
-              if (contentLength > 0) {
-                setProgressData({ percent: Math.round(loaded / contentLength * 100), speed: 0 });
-              }
-            }
-            const blob = new Blob(chunks, { type: audioOnly ? 'audio/mp4' : 'video/mp4' });
-            const blobUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = safeName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-          } catch (ytErr) {
-            // CORS blocked — open directly in new tab (user can right-click → save as)
-            console.warn('Direct Invidious fetch failed, opening in new tab:', ytErr.message);
-            window.open(dlUrl, '_blank', 'noreferrer');
-          }
-          setDownloading(false);
+        if (platform === 'youtube') {
+          // ─── Direct Browser Download for Loader.to ───
+          const a = document.createElement('a');
+          a.href = dlUrl;
+          a.download = safeName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
 
         } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
           // Raw TikTok CDN links often block XHR via CORS. Opening them directly works!

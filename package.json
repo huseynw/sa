@@ -22,8 +22,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-i18next": "^17.0.7",
-    "youtube-dl-exec": "^3.1.6",
-    "youtube-ext": "^1.1.25"
+    "youtube-dl-exec": "^3.1.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
