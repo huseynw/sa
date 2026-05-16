@@ -115,29 +115,37 @@ const ResultCard = ({ result, url }) => {
                 setDownloading(false);
                 return;
               } else {
-                setProgressData({ percent: 10, speed: 'Birbaşa link alınır...' });
-                const vIdMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-                if (vIdMatch && vIdMatch[1]) {
-                  fetch(`https://inv.thepixora.com/api/v1/videos/${vIdMatch[1]}?fields=adaptiveFormats`)
-                    .then(r => r.json())
-                    .then(d => {
-                      const fmt = d.adaptiveFormats?.find(f => f.type.includes('mp4') && f.qualityLabel?.includes(String(qNum)));
-                      if (fmt && fmt.url) {
-                        window.location.href = fmt.url;
-                      } else {
-                        alert('Xəta: Bu keyfiyyətdə səssiz MP4 tapılmadı. Zəhmət olmasa WEBM səsli variantını yoxlayın.');
-                      }
-                      setDownloading(false);
-                    })
-                    .catch(err => {
-                      console.error(err);
-                      alert('Bağlantı xətası. Alternativ olaraq WEBM səsli variantını seçin.');
-                      setDownloading(false);
-                    });
-                } else {
-                  setDownloading(false);
+                // No pre-fetched stream: try Invidious instances
+                setProgressData({ percent: 5, speed: 'Birbaşa link axtarlır...' });
+                const vidMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                if (vidMatch && vidMatch[1]) {
+                  const invInstances = [
+                    'https://invidious.nerdvpn.de',
+                    'https://inv.nadeko.net',
+                    'https://yt.cdaut.de',
+                    'https://invidious.privacyredirect.com',
+                  ];
+                  let foundUrl = null;
+                  for (const inst of invInstances) {
+                    try {
+                      const r = await fetch(`${inst}/api/v1/videos/${vidMatch[1]}?fields=adaptiveFormats`, { signal: AbortSignal.timeout(6000) });
+                      if (!r.ok) continue;
+                      const d = await r.json();
+                      const fmt = d.adaptiveFormats?.find(f =>
+                        f.type?.includes('mp4') && (f.qualityLabel?.includes(`${qNum}`) || f.qualityLabel?.startsWith(`${qNum}p`))
+                      );
+                      if (fmt?.url) { foundUrl = fmt.url; break; }
+                    } catch(e) { continue; }
+                  }
+                  if (foundUrl) {
+                    window.location.href = foundUrl;
+                    setDownloading(false);
+                    return;
+                  }
                 }
-                return;
+                // All Invidious failed - fall through to loader.to 8k (WEBM)
+                format = '8k';
+                dlExt = 'webm';
               }
             }
             else if (selectedQ === '720') format = '720';
@@ -182,18 +190,21 @@ const ResultCard = ({ result, url }) => {
               throw new Error(progData.error || `Serverden ${progRes.status} xətası geldi`);
             }
 
-            if (progData.success || progData.progress) {
+            // IMPORTANT: progress=0 is falsy in JS!
+            // Old bug: `if (progData.success || progData.progress)` treats progress=0 as false -> throws error
+            if ('progress' in progData || progData.download_url) {
               const p = Math.max(10, Math.round((progData.progress || 0) / 10));
               const statusText = progData.text ? `${progData.text} (${pollCount}/${MAX_POLLS})` : 'Konvertasiya edilir...';
               setProgressData({ percent: p, speed: statusText });
-              if (progData.progress === 1000) {
+              if (progData.progress === 1000 || progData.download_url) {
                 dlUrl = progData.download_url;
-                dlExt = audioOnly ? 'mp3' : 'mp4';
+                dlExt = (selectedQ && selectedQ.endsWith('_webm')) ? 'webm' : audioOnly ? 'mp3' : 'mp4';
                 isComplete = true;
               }
-            } else {
+            } else if (progData.error || progData.message) {
               throw new Error(progData.text || progData.error || progData.message || 'Konvertasiya xətası baş verdi.');
             }
+            // No error field = still processing, keep polling
           }
           
           if (!isComplete) {
