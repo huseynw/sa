@@ -23,6 +23,14 @@ export const handler = async (event) => {
     const body = JSON.parse(event.body);
     const { action, url, format, jobId } = body;
 
+    // Spoof Referer/Origin so the API thinks the request comes from loader.to itself
+    const spoofedHeaders = {
+      'Referer': 'https://loader.to/',
+      'Origin': 'https://loader.to',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, */*',
+    };
+
     if (action === 'start') {
       // Step 1: start conversion job
       if (!url || !format) {
@@ -33,8 +41,13 @@ export const handler = async (event) => {
       for (const domain of DOMAINS) {
         try {
           const apiUrl = `https://${domain}/ajax/download.php?format=${encodeURIComponent(format)}&url=${encodeURIComponent(url)}&api=${API_KEY}`;
-          const res = await fetch(apiUrl, { signal: AbortSignal.timeout(8000) });
-          const data = await res.json();
+          const res = await fetch(apiUrl, {
+            headers: spoofedHeaders,
+            signal: AbortSignal.timeout(10000)
+          });
+          const text = await res.text();
+          console.log(`[yt-loader] ${domain} start response (${res.status}):`, text.substring(0, 200));
+          const data = JSON.parse(text);
           if (data.success) {
             return {
               statusCode: 200,
@@ -42,7 +55,7 @@ export const handler = async (event) => {
               body: JSON.stringify({ ...data, domain }),
             };
           }
-          lastErr = new Error(data.text || 'API returned failure');
+          lastErr = new Error(data.text || data.message || `API failure: ${text}`);
         } catch (err) {
           console.warn(`[yt-loader] Domain ${domain} failed:`, err.message);
           lastErr = err;
@@ -56,7 +69,10 @@ export const handler = async (event) => {
       if (!jobId || !domain) {
         return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'jobId and domain required' }) };
       }
-      const res = await fetch(`https://${domain}/ajax/progress.php?id=${jobId}`, { signal: AbortSignal.timeout(8000) });
+      const res = await fetch(`https://${domain}/ajax/progress.php?id=${jobId}`, {
+        headers: spoofedHeaders,
+        signal: AbortSignal.timeout(10000)
+      });
       const data = await res.json();
       return {
         statusCode: 200,
