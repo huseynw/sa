@@ -112,7 +112,8 @@ export const handler = async (event, context) => {
         finalUrl = tikwmData.data.images[0];
         ext = 'jpeg';
       } else {
-        finalUrl = tikwmData.data.play || tikwmData.data.wmplay;
+        // hdplay = HD keyfiyyət (watermark-siz), play = SD, wmplay = watermarklı
+        finalUrl = tikwmData.data.hdplay || tikwmData.data.play || tikwmData.data.wmplay;
         ext = 'mp4';
       }
 
