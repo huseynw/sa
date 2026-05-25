@@ -31,6 +31,9 @@ export default defineConfig({
   // Dev modunda da source map-ları deaktiv et
   css: {
     devSourcemap: false,
+    lightningcss: {
+      errorRecovery: true,
+    },
   },
 })
 
