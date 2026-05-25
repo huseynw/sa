@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import Odometer from 'react-odometerjs';
+import 'odometer/themes/odometer-theme-minimal.css';
 
 /* ── Animated counter hook ── */
 function useCountUp(target, duration = 2000, start = false) {
@@ -49,7 +51,6 @@ function formatNumber(n) {
 
 /* ── Single stat card ── */
 function StatCard({ icon, label, value, color, delay, started }) {
-  const animated = useCountUp(value, 2200, started);
   return (
     <motion.div
       className="stat-card"
@@ -61,7 +62,9 @@ function StatCard({ icon, label, value, color, delay, started }) {
       <div className="stat-icon-wrap">
         <i className={icon} />
       </div>
-      <div className="stat-value">{formatNumber(animated)}</div>
+      <div className="stat-value">
+        <Odometer value={started ? value : 0} format="(,ddd)" duration={2000} />
+      </div>
       <div className="stat-label">{label}</div>
     </motion.div>
   );
@@ -91,7 +94,9 @@ function PlatformRow({ icon, label, value, color, maxVal, delay, started }) {
           />
         </div>
       </div>
-      <div className="psr-count" style={{ color }}>{formatNumber(animated)}</div>
+      <div className="psr-count" style={{ color }}>
+        <Odometer value={started ? value : 0} format="(,ddd)" duration={2000} />
+      </div>
     </motion.div>
   );
 }

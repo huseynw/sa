@@ -1082,3 +1082,11 @@ main {
   .feedback-footer { flex-direction: column; align-items: stretch; }
   .feedback-submit-btn { justify-content: center; }
 }
+
+/* ── Odometer ── */
+.odometer {
+  font-family: inherit !important;
+}
+.odometer-digit {
+  font-variant-numeric: tabular-nums;
+}
