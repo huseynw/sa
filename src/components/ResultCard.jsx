@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { downloadFile } from '../utils/downloader';
 import ProgressBar from './ProgressBar';
 
 /* ── helpers ── */
-const detectPlatform = (url = '') => {
+const detectPlatform = (url = '', forcedPlatform) => {
+  if (forcedPlatform && forcedPlatform !== 'generic') return forcedPlatform;
   const u = url.toLowerCase();
   if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube';
   if (u.includes('tiktok.com')) return 'tiktok';
@@ -29,24 +30,16 @@ const platformMeta = {
   generic:   { label: 'Media',     icon: 'fa-solid fa-photo-film', cls: '',   btnCls: 'btn-primary' },
 };
 
-const ALL_QUALITIES = [144, 240, 360, 480, 720, 1080, 1440, 2160];
-const QUALITY_LABELS = { 144:'144p', 240:'240p', 360:'360p', 480:'480p', 720:'720p', 1080:'1080p', 1440:'1440p (2K)', 2160:'2160p (4K)' };
-
 /* ────────────────────────────────── */
-const ResultCard = ({ result, url }) => {
+const ResultCard = ({ result, url, platform: forcedPlatform }) => {
   const { t } = useTranslation();
-  const platform = detectPlatform(url);
+  const platform = detectPlatform(url, forcedPlatform);
   const meta = platformMeta[platform] || platformMeta.generic;
   const isGallery = result?.status === 'picker';
 
   /* tabs */
   const tabs = buildTabs(platform, isGallery, t);
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || 'video');
-
-  /* quality */
-  const [qualities, setQualities] = useState(null);   // null = loading, [] = failed/fallback
-  const [selectedQ, setSelectedQ] = useState('max');
-  const [rawStreams, setRawStreams] = useState({});
 
   /* mute toggle (TikTok) */
   const [muted, setMuted] = useState(false);
@@ -57,30 +50,6 @@ const ResultCard = ({ result, url }) => {
   /* download state */
   const [downloading, setDownloading] = useState(false);
   const [progressData, setProgressData] = useState(null);
-
-  /* ── Fetch YouTube qualities ── */
-  useEffect(() => {
-    if (platform !== 'youtube') return;
-    setQualities(null);
-    fetch('/.netlify/functions/get-qualities', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    })
-      .then(r => r.json())
-      .then(d => {
-        const list = (d.qualities || ALL_QUALITIES).sort((a, b) => a - b);
-        setQualities(list);
-        setRawStreams(d.rawStreams || {});
-        const std = list.filter(q => q <= 1080);
-        setSelectedQ(String(std.length > 0 ? std[std.length - 1] : list[list.length - 1]));
-      })
-      .catch(() => {
-        setQualities(ALL_QUALITIES);
-        setRawStreams({});
-        setSelectedQ('1080');
-      });
-  }, [url, platform]);
 
   if (!result) return null;
 
@@ -101,94 +70,110 @@ const ResultCard = ({ result, url }) => {
 
       if (!dlUrl) {
         if (platform === 'youtube') {
-          // ─── LOADER.TO API (TAMAMİLƏ YENİ, COBALT VƏ INVIDIOUS YOXDUR) ───
-          let format = '720';
+          /* ── YouTube: Megan API ── */
+          setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
+
+          const action = audioOnly ? 'yt-mp3' : 'yt-mp4';
+          const data = await fetch('/.netlify/functions/megan-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, url }),
+          }).then(r => r.json());
+
+          if (!data.status?.success) {
+            throw new Error(data.data?.error || data.error || t('error_fetching'));
+          }
+
+          dlUrl = data.data.proxyUrl || data.data.downloadUrl;
+          dlExt = audioOnly ? 'mp3' : 'mp4';
+
+          if (!dlUrl) throw new Error('Download URL tapılmadı');
+
+        } else if (platform === 'tiktok') {
+          /* ── TikTok: Megan API ── */
+          setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
+
+          const action = audioOnly ? 'tiktok-audio' : 'tiktok';
+          const data = await fetch('/.netlify/functions/megan-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, url }),
+          }).then(r => r.json());
+
+          if (!data.status?.success) {
+            throw new Error(data.data?.error || data.error || t('error_fetching'));
+          }
+
+          const d = data.data;
           if (audioOnly) {
-            format = 'mp3';
+            dlUrl = d.download || d.url || d.music;
+            dlExt = 'mp3';
           } else {
-            if (selectedQ === 'max' || selectedQ === '1080') format = '1080';
-            else if (selectedQ.endsWith('_webm')) format = '8k';
-            else if (selectedQ === '720') format = '720';
-            else if (selectedQ === '480') format = '480';
-            else if (selectedQ === '360' || selectedQ === '240' || selectedQ === '144') format = '360';
-            else format = '1080';
+            dlUrl = d.download || d.url || d.hdplay || d.play;
+            dlExt = 'mp4';
           }
-          
-          setProgressData({ percent: 5, speed: 'Hazırlanır...' });
-          
-          // ── Proxy through Netlify function to avoid CORS ──
-          const startRes = await fetch('/.netlify/functions/yt-loader', {
+
+          if (!dlUrl) throw new Error('Download URL tapılmadı');
+
+        } else if (platform === 'instagram') {
+          /* ── Instagram: Megan API ── */
+          setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
+
+          const data = await fetch('/.netlify/functions/megan-proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'start', url, format }),
-          });
-          const startData = await startRes.json();
-          if (!startData.success) {
-            throw new Error(startData.text || startData.error || 'YouTube yükləmə xətası.');
-          }
-          const jobId = startData.id;
-          const activeDomain = startData.domain;
-          let isComplete = false;
-          let pollCount = 0;
-          const MAX_POLLS = 90; // 90 x 2s = 3 dəqiqə maksimum
-          
-          while (!isComplete && pollCount < MAX_POLLS) {
-            await new Promise(r => setTimeout(r, 2000));
-            pollCount++;
-            const progRes = await fetch('/.netlify/functions/yt-loader', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'progress', jobId, domain: activeDomain }),
-            });
-            const progRaw = await progRes.text();
-            console.log('[Progress raw]', progRes.status, progRaw.substring(0, 200));
-            
-            let progData;
-            try { progData = JSON.parse(progRaw); } catch(e) { throw new Error('API cavabı JSON deyil: ' + progRaw.substring(0, 100)); }
-            
-            if (!progRes.ok) {
-              throw new Error(progData.error || `Serverden ${progRes.status} xətası geldi`);
-            }
+            body: JSON.stringify({ action: 'instagram', url }),
+          }).then(r => r.json());
 
-            // IMPORTANT: progress=0 is falsy in JS!
-            // Old bug: `if (progData.success || progData.progress)` treats progress=0 as false -> throws error
-            if ('progress' in progData || progData.download_url) {
-              const p = Math.max(10, Math.round((progData.progress || 0) / 10));
-              const statusText = progData.text ? `${progData.text} (${pollCount}/${MAX_POLLS})` : 'Konvertasiya edilir...';
-              setProgressData({ percent: p, speed: statusText });
-              if (progData.progress === 1000 || progData.download_url) {
-                dlUrl = progData.download_url;
-                dlExt = (selectedQ && selectedQ.endsWith('_webm')) ? 'webm' : audioOnly ? 'mp3' : 'mp4';
-                isComplete = true;
-              }
-            } else if (progData.error || progData.message) {
-              throw new Error(progData.text || progData.error || progData.message || 'Konvertasiya xətası baş verdi.');
-            }
-            // No error field = still processing, keep polling
-          }
-          
-          if (!isComplete) {
-            throw new Error('Video konvertasiyası vaxt aşdı. Farklı keyfiyyət səyin.');
+          if (!data.status?.success) {
+            throw new Error(data.data?.error || data.error || t('error_fetching'));
           }
 
-        } else {
-          // ─── TIKTOK + OTHER platforms via Lambda (fetch-youtube / fetch-info) ───
-          const useLambda = platform === 'tiktok';
-          const fetchEndpoint = useLambda
-            ? '/.netlify/functions/fetch-youtube'
-            : '/.netlify/functions/fetch-info';
+          const d = data.data;
+          if (d.images?.length > 0) {
+            alert('Gallery üçün əvvəlcə şəkilləri seçin.');
+            setDownloading(false);
+            return;
+          }
+          dlUrl = d.download || d.url || d.video;
+          dlExt = 'mp4';
 
-          const res = await fetch(fetchEndpoint, {
+          if (!dlUrl) throw new Error('Download URL tapılmadı');
+
+        } else if (platform === 'facebook') {
+          /* ── Facebook: Megan API ── */
+          setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
+
+          const data = await fetch('/.netlify/functions/megan-proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, isAudioOnly: audioOnly, quality: selectedQ, isMuted }),
-          });
-          const data = await res.json();
+            body: JSON.stringify({ action: 'facebook', url }),
+          }).then(r => r.json());
+
+          if (!data.status?.success) {
+            throw new Error(data.data?.error || data.error || t('error_fetching'));
+          }
+
+          const d = data.data;
+          dlUrl = d.hdUrl || d.sdUrl || d.download || d.url;
+          dlExt = 'mp4';
+
+          if (!dlUrl) throw new Error('Download URL tapılmadı');
+
+        } else if (platform === 'pinterest') {
+          /* ── Pinterest: Cobalt (dəyişməz) ── */
+          setProgressData({ percent: 10, speed: 'Cobalt API-yə sorğu göndərilir...' });
+
+          const data = await fetch('/.netlify/functions/fetch-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, isAudioOnly: audioOnly, quality: 'max', isMuted }),
+          }).then(r => r.json());
 
           if (data.error) throw new Error(data.details || data.error);
-          if (data.status === 'error') throw new Error(data.text || data.error?.code || 'Naməlum xəta');
+          if (data.status === 'error') throw new Error(data.text || 'Naməlum xəta');
 
-          if (['stream', 'redirect', 'tunnel', 'youtube_ready'].includes(data.status)) {
+          if (['stream', 'redirect', 'tunnel'].includes(data.status)) {
             dlUrl = data.url;
             if (data.ext) dlExt = data.ext;
           } else if (data.status === 'picker') {
@@ -200,7 +185,9 @@ const ResultCard = ({ result, url }) => {
       }
 
       if (dlUrl) {
-        // Auto-detect image extension from URL (Cobalt returns direct image CDN links)
+        setProgressData({ percent: 50, speed: 'Yüklənir...' });
+
+        /* Image extension auto-detect */
         if (imageMode || dlExt === 'jpg') {
           try {
             const urlPath = new URL(dlUrl).pathname.toLowerCase();
@@ -208,32 +195,21 @@ const ResultCard = ({ result, url }) => {
             else if (urlPath.endsWith('.webp')) dlExt = 'webp';
             else if (urlPath.endsWith('.jpeg') || urlPath.endsWith('.jpg')) dlExt = 'jpg';
             else if (urlPath.endsWith('.gif')) dlExt = 'gif';
-          } catch (e) { /* keep default */ }
+          } catch {}
         }
+
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        if (platform === 'youtube') {
-          // CDN server sends Content-Disposition: attachment, so navigating to the URL
-          // triggers a download on all platforms.
-          // window.location.href is NOT blocked by iOS Safari popup blockers (unlike a.click() from async code).
+        /* Megan API proxy URL-ləri və ya YouTube CDN linkləri birbaşa açılır */
+        const isMeganProxy = dlUrl.includes('megan-apis') || dlUrl.includes('render.com');
+        const isYouTubeCdn = dlUrl.includes('googlevideo.com') || dlUrl.includes('123tokyo');
+
+        if (isMeganProxy || isYouTubeCdn) {
           setProgressData({ percent: 100, speed: 'Yüklənir...' });
           window.location.href = dlUrl;
-
-        } else if (platform === 'tiktok' && dlUrl.startsWith('http') && !dlUrl.includes('cobalt') && !dlUrl.includes('netlify')) {
-          // Raw TikTok CDN links often block XHR via CORS. Opening them directly works!
-          const a = document.createElement('a');
-          a.href = dlUrl.includes('#') ? dlUrl : `${dlUrl}#${safeName}`;
-          a.download = safeName;
-          a.target = '_blank';
-          a.rel = 'noreferrer';
-          a.referrerPolicy = 'no-referrer';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setDownloading(false);
         } else {
+          /* XHR download (progress tracking ilə) */
           try {
-            // Invidious proxy URLs (YouTube) and tikwm proxy URLs (TikTok) support CORS — XHR works
             await downloadFile(dlUrl, safeName, (prog) => setProgressData(prog));
           } catch (downloadErr) {
             console.warn('XHR download failed, falling back to direct link:', downloadErr);
@@ -266,13 +242,9 @@ const ResultCard = ({ result, url }) => {
     setProgressData({ percent: 0, speed: 0 });
     const baseName = getBaseName();
     for (let i = 0; i < selectedImgs.length; i++) {
-      // Simulate progress for multi-image
       setProgressData({ percent: Math.round((i / selectedImgs.length) * 100), speed: 0 });
       let imgUrl = selectedImgs[i];
       const safeName = `${baseName}_${i + 1}.jpg`;
-      
-      // We don't proxy TikTok images anymore because it causes 403 Forbidden
-      // due to missing specific cookies/signatures on the Netlify proxy.
       await downloadFile(imgUrl, safeName, () => {});
     }
     setProgressData({ percent: 100, speed: 0 });
@@ -287,7 +259,6 @@ const ResultCard = ({ result, url }) => {
   const ytId = platform === 'youtube' ? extractYtId(url) : null;
   const thumbUrl = ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : null;
 
-  /* Use scraped metadata if available, fallback to youtube thumb */
   const previewImg = result.previewMeta?.image || thumbUrl || null;
   const previewTitle = result.previewMeta?.title || '';
 
@@ -297,7 +268,7 @@ const ResultCard = ({ result, url }) => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {/* ── Metadata Preview ── */}
+      {/* Metadata Preview */}
       {previewTitle && (
         <div className="preview-card">
           {previewImg && (
@@ -317,7 +288,7 @@ const ResultCard = ({ result, url }) => {
         </div>
       )}
 
-      {/* ── Progress Bar ── */}
+      {/* Progress Bar */}
       {progressData && (
         <div style={{ marginBottom: '16px' }}>
           <ProgressBar progress={progressData.percent} speed={progressData.speed} />
@@ -344,21 +315,13 @@ const ResultCard = ({ result, url }) => {
           <YoutubeMP3Tab thumbUrl={thumbUrl} downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} />
         )}
         {platform === 'youtube' && activeTab === 'video' && (
-          <YoutubeVideoTab
-            thumbUrl={thumbUrl}
-            qualities={qualities}
-            selectedQ={selectedQ}
-            setSelectedQ={setSelectedQ}
-            downloading={downloading}
-            onDownload={handleDownload}
-            btnCls={meta.btnCls}
-          />
+          <YoutubeVideoTab thumbUrl={thumbUrl} downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} />
         )}
         {platform === 'youtube' && activeTab === 'thumbnail' && (
           <YoutubeThumbnailTab videoId={extractYtId(url)} title={result?.previewMeta?.title || 'thumbnail'} btnCls={meta.btnCls} />
         )}
 
-
+        {/* ═══ TIKTOK ═══ */}
         {platform === 'tiktok' && activeTab === 'video' && (
           <TikTokVideoTab muted={muted} setMuted={setMuted} downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} />
         )}
@@ -372,10 +335,10 @@ const ResultCard = ({ result, url }) => {
             toggleImg={toggleImg}
             downloading={downloading}
             onDownloadSelected={downloadSelectedImgs}
-            onDownloadAudio={() => handleDownload({ audioOnly: true, specificUrl: result.audio, filename: 'audio.mp3' })}
+            onDownloadAudio={() => handleDownload({ audioOnly: true })}
             pcCls={meta.cls}
             btnCls={meta.btnCls}
-            hasAudio={!!result.audio}
+            hasAudio={false}
           />
         )}
 
@@ -397,14 +360,14 @@ const ResultCard = ({ result, url }) => {
           />
         )}
 
-        {/* ═══ PINTEREST & FACEBOOK & INSTAGRAM & GENERIC ═══ */}
-        {['pinterest', 'facebook', 'generic'].includes(platform) && activeTab === 'video' && (
+        {/* ═══ PINTEREST & FACEBOOK ═══ */}
+        {['pinterest', 'facebook'].includes(platform) && activeTab === 'video' && (
           <VideoTab downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} isReels={false} />
         )}
-        {['pinterest', 'facebook', 'generic', 'instagram'].includes(platform) && activeTab === 'image' && (
+        {['pinterest', 'facebook'].includes(platform) && activeTab === 'image' && (
           <ImageTab downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} />
         )}
-        {['pinterest', 'facebook', 'generic'].includes(platform) && activeTab === 'mp3' && (
+        {['pinterest', 'facebook'].includes(platform) && activeTab === 'mp3' && (
           <AudioTab downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} />
         )}
       </div>
@@ -431,7 +394,6 @@ function buildTabs(platform, isGallery, t) {
     if (isGallery) return [{ id: 'images', label: t('tab_images'), icon: 'fa-solid fa-images' }];
     return [
       { id: 'video', label: t('tab_reels'), icon: 'fa-solid fa-video' },
-      { id: 'image', label: t('ig_feat2'),  icon: 'fa-solid fa-image' }
     ];
   }
   if (platform === 'pinterest') return [
@@ -460,63 +422,28 @@ const YoutubeMP3Tab = ({ thumbUrl, downloading, onDownload, btnCls }) => {
     </div>
     <div className="action-row">
       <button className={`btn ${btnCls}`} disabled={downloading}
-        onClick={() => onDownload({ audioOnly: true, filename: 'audio.mp3' })}>
+        onClick={() => onDownload({ audioOnly: true })}>
         {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-music" /> {t('btn_mp3')}</>}
       </button>
     </div>
   </div>
 );};
 
-const YoutubeVideoTab = ({ thumbUrl, qualities, rawStreams, selectedQ, setSelectedQ, downloading, onDownload, btnCls }) => {
+const YoutubeVideoTab = ({ thumbUrl, downloading, onDownload, btnCls }) => {
   const { t } = useTranslation();
-  const stdQualities = qualities ? qualities.filter(q => q <= 1080) : [];
-  const highQualities = qualities ? qualities.filter(q => q > 1080) : [];
-
   return (
   <div>
-    {qualities === null ? (
-      <div className="quality-loading">
-        <span className="spinner" style={{ borderTopColor: 'var(--text2)' }} />
-        {t('qualities_loading')}
-      </div>
-    ) : (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div className="quality-row">
-          {stdQualities.map(q => (
-            <button key={q}
-              className={`quality-pill ${selectedQ === String(q) ? 'selected yt' : ''}`}
-              onClick={() => setSelectedQ(String(q))}>
-              {QUALITY_LABELS[q] || `${q}p`} (MP4, {t('with_audio') || 'Səsli'})
-            </button>
-          ))}
-        </div>
-        {highQualities.length > 0 && (
-          <div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text2)', marginBottom: '8px', fontWeight: 600 }}>2K / 4K Seçimləri (Yüksək Keyfiyyət):</div>
-            <div className="quality-row">
-              {highQualities.map(q => (
-                <React.Fragment key={q}>
-                  <button
-                    className={`quality-pill ${selectedQ === `${q}_webm` ? 'selected yt' : ''}`}
-                    onClick={() => setSelectedQ(`${q}_webm`)}>
-                    {QUALITY_LABELS[q] || `${q}p`} (WEBM, {t('with_audio') || 'Səsli'})
-                  </button>
-                </React.Fragment>
-              ))}
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text3)', marginTop: '4px' }}>* iPhone-larda WEBM dəstəklənməyə bilər, zəhmət olmasa MP4 (1080p) yükləyin.</p>
-          </div>
-        )}
-      </div>
-    )}
-    <div className="divider" />
+    <div style={{ fontSize: '0.85rem', color: 'var(--text2)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <i className="fa-solid fa-circle-info" />
+      {t('yt_video_info')}
+    </div>
     <div className="action-row">
-      <button className={`btn ${btnCls}`} disabled={downloading || qualities === null}
-        onClick={() => onDownload({ audioOnly: false, filename: 'video.mp4' })}>
+      <button className={`btn ${btnCls}`} disabled={downloading}
+        onClick={() => onDownload({ audioOnly: false })}>
         {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-video" /> {t('btn_video')}</>}
       </button>
-      <button className="btn btn-ghost" disabled={downloading || qualities === null}
-        onClick={() => onDownload({ audioOnly: true, filename: 'audio.mp3' })}>
+      <button className="btn btn-ghost" disabled={downloading}
+        onClick={() => onDownload({ audioOnly: true })}>
         <i className="fa-solid fa-music" /> {t('btn_audio_only')}
       </button>
     </div>
@@ -536,14 +463,14 @@ const TikTokVideoTab = ({ muted, setMuted, downloading, onDownload, btnCls }) =>
     </div>
     <div className="action-row">
       <button className={`btn ${btnCls}`} disabled={downloading}
-        onClick={() => onDownload({ isMuted: muted, filename: 'tiktok_video.mp4' })}>
+        onClick={() => onDownload({ isMuted: muted, audioOnly: false })}>
         {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-video" /> {muted ? t('btn_muted') : t('btn_video')}</>}
       </button>
     </div>
   </div>
 );};
 
-const AudioTab = ({ downloading, onDownload, btnCls, audioUrl }) => {
+const AudioTab = ({ downloading, onDownload, btnCls }) => {
   const { t } = useTranslation();
   return (
   <div>
@@ -553,7 +480,7 @@ const AudioTab = ({ downloading, onDownload, btnCls, audioUrl }) => {
     </div>
     <div className="action-row">
       <button className={`btn ${btnCls}`} disabled={downloading}
-        onClick={() => onDownload({ audioOnly: true, specificUrl: audioUrl || null, filename: 'audio.mp3' })}>
+        onClick={() => onDownload({ audioOnly: true })}>
         {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-music" /> {t('btn_mp3')}</>}
       </button>
     </div>
@@ -566,7 +493,7 @@ const VideoTab = ({ downloading, onDownload, btnCls, isReels }) => {
   <div>
     <div className="action-row">
       <button className={`btn ${btnCls}`} disabled={downloading}
-        onClick={() => onDownload({ audioOnly: false, filename: 'video.mp4' })}>
+        onClick={() => onDownload({ audioOnly: false })}>
         {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-video" /> {isReels ? t('btn_reels') : t('btn_video')}</>}
       </button>
     </div>
@@ -579,7 +506,7 @@ const ImageTab = ({ downloading, onDownload, btnCls }) => {
   <div>
     <div className="action-row">
       <button className={`btn ${btnCls}`} disabled={downloading}
-        onClick={() => onDownload({ audioOnly: false, imageMode: true, filename: 'image.jpg' })}>
+        onClick={() => onDownload({ audioOnly: false, imageMode: true })}>
         {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-image" /> {t('btn_image')}</>}
       </button>
     </div>
@@ -666,7 +593,6 @@ const YoutubeThumbnailTab = ({ videoId, title, btnCls }) => {
 
   return (
     <div>
-      {/* Quality selector */}
       <div className="quality-row" style={{ marginBottom: '14px' }}>
         {QUALITIES.map(q => (
           <button key={q.id}
@@ -677,7 +603,6 @@ const YoutubeThumbnailTab = ({ videoId, title, btnCls }) => {
         ))}
       </div>
 
-      {/* Live preview */}
       <div style={{ borderRadius: '10px', overflow: 'hidden', marginBottom: '14px', background: 'var(--card2)' }}>
         <img
           key={selectedQ}
@@ -688,7 +613,6 @@ const YoutubeThumbnailTab = ({ videoId, title, btnCls }) => {
         />
       </div>
 
-      {/* Download button */}
       <div className="action-row">
         <button className={`btn ${btnCls}`} disabled={downloading} onClick={handleDownload}>
           {downloading

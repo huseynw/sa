@@ -13,7 +13,7 @@ const trackStat = (action, platform) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, platform }),
     keepalive: true,
-  }).catch(() => {}); // fire-and-forget, errors silently ignored
+  }).catch(() => {});
 };
 
 /* ── Looping Typewriter Title ── */
@@ -58,6 +58,20 @@ function TypewriterTitle() {
   );
 }
 
+/* ── Platform URL Validation ── */
+const URL_PATTERNS = {
+  youtube: /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/|clip\/|playlist\?list=)|youtu\.be\/|youtube\.com\/channel\/|youtube\.com\/@|youtube\.com\/c\/)/i,
+  tiktok: /(?:tiktok\.com\/|vm\.tiktok\.com\/|tiktok\.com\/@[\w.-]+\/video\/)/i,
+  instagram: /(?:instagram\.com\/(?:p|reel|stories|tv|explore\/tags)\/|instagr\.am\/)/i,
+  pinterest: /(?:pinterest\.com\/|pin\.it\/|pinterest\.[a-z]+\.au|pinterest\.[a-z]+\.co\.[a-z]+)/i,
+  facebook: /(?:facebook\.com\/|fb\.watch\/|fb\.com\/|m\.facebook\.com\/|web\.facebook\.com\/|facebook\.com\/watch)/i,
+};
+
+function isValidUrlForPlatform(url, platform) {
+  if (!url || !url.trim()) return false;
+  return URL_PATTERNS[platform]?.test(url.trim()) || false;
+}
+
 const PLATFORMS = (t) => [
   {
     id: 'youtube', cls: 'yt', label: 'YouTube',
@@ -66,6 +80,7 @@ const PLATFORMS = (t) => [
     placeholder: t('yt_placeholder'),
     desc: t('yt_desc'),
     features: [t('yt_feat1'), t('yt_feat2'), t('yt_feat3')],
+    isSearchable: true,
   },
   {
     id: 'tiktok', cls: 'tt', label: 'TikTok',
@@ -107,7 +122,6 @@ function App() {
   const { t } = useTranslation();
   const platforms = PLATFORMS(t);
 
-  /* Track page visit once */
   const visitTracked = useRef(false);
   useEffect(() => {
     if (!visitTracked.current) {
@@ -120,59 +134,257 @@ function App() {
   const [urls,     setUrls]     = useState({});
   const [results,  setResults]  = useState({});
   const [loadings, setLoadings] = useState({});
+  const [urlErrors, setUrlErrors] = useState({});
+
+  /* ── YouTube search state ── */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchSearched, setSearchSearched] = useState(false);
 
   const pid = activePlatform.id;
   const url     = urls[pid]     || '';
   const result  = results[pid]  || null;
   const loading = loadings[pid] || false;
+  const urlError = urlErrors[pid] || '';
 
   const setUrl    = (v) => setUrls(p     => ({ ...p, [pid]: v }));
   const setResult = (v) => setResults(p  => ({ ...p, [pid]: v }));
   const setLoad   = (v) => setLoadings(p => ({ ...p, [pid]: v }));
+  const setUrlError = (v) => setUrlErrors(p => ({ ...p, [pid]: v }));
 
   const selectPlatform = (p) => {
     setActivePlatform(p);
     document.documentElement.style.setProperty('--platform-color', p.color);
     document.documentElement.style.setProperty('--platform-glow',  p.glow);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchSearched(false);
+    setUrlErrors(prev => ({ ...prev, [p.id]: '' }));
+  };
+
+  /* ── Real-time URL validation on type ── */
+  const handleUrlChange = (v) => {
+    setUrl(v);
+    if (v.trim() && !isValidUrlForPlatform(v, pid)) {
+      setUrlError(t('error_invalid_url_platform', { platform: activePlatform.label }));
+    } else {
+      setUrlError('');
+    }
   };
 
   const handlePaste = async () => {
-    try { const text = await navigator.clipboard.readText(); setUrl(text); } catch {}
+    try {
+      const text = await navigator.clipboard.readText();
+      setUrl(text);
+      if (text.trim() && !isValidUrlForPlatform(text, pid)) {
+        setUrlError(t('error_invalid_url_platform', { platform: activePlatform.label }));
+      } else {
+        setUrlError('');
+      }
+    } catch {}
   };
 
+  /* ── YouTube search handler ── */
+  const handleYouTubeSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    trackStat('download', 'youtube');
+
+    try {
+      setSearchLoading(true);
+      setSearchResults([]);
+      setSearchSearched(true);
+
+      const res = await fetch('/.netlify/functions/megan-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'yt-search', query: searchQuery.trim() }),
+      });
+      const data = await res.json();
+
+      if (data.status?.success && data.data?.results) {
+        setSearchResults(data.data.results.slice(0, 5));
+      } else {
+        setSearchResults([]);
+      }
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  /* ── Select a YouTube search result ── */
+  const handleSelectSearchResult = (item) => {
+    const fullUrl = item.url || `https://youtube.com/watch?v=${item.videoId}`;
+    setUrl(fullUrl);
+    setSearchResults([]);
+    setSearchQuery('');
+    setSearchSearched(false);
+
+    trackStat('download', 'youtube');
+
+    setLoad(true);
+    setResult(null);
+
+    fetch('/.netlify/functions/megan-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'yt-info', url: fullUrl }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.status?.success && data.data) {
+          setResult({
+            status: 'youtube_ready',
+            url: fullUrl,
+            previewMeta: {
+              title: data.data.title || item.title,
+              image: data.data.thumbnail || item.thumbnail,
+              description: data.data.author || '',
+            },
+          });
+        } else {
+          setResult({
+            status: 'youtube_ready',
+            url: fullUrl,
+            previewMeta: { title: item.title, image: item.thumbnail, description: item.author || '' },
+          });
+        }
+      })
+      .catch(() => {
+        setResult({
+          status: 'youtube_ready',
+          url: fullUrl,
+          previewMeta: { title: item.title, image: item.thumbnail, description: item.author || '' },
+        });
+      })
+      .finally(() => setLoad(false));
+  };
+
+  /* ── Main search handler (link mode) ── */
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!url.trim()) return;
-    
-    // Yükləmə statistikasını Axtar düyməsinə basılanda artır
+
+    /* ── URL validation ── */
+    if (!isValidUrlForPlatform(url, pid)) {
+      setUrlError(t('error_invalid_url_platform', { platform: activePlatform.label }));
+      return;
+    }
+    setUrlError('');
+
     trackStat('download', pid);
 
     try {
       setLoad(true);
       setResult(null);
 
-      const isYouTube = url.toLowerCase().includes('youtube.com') || url.toLowerCase().includes('youtu.be');
+      if (pid === 'youtube') {
+        /* YouTube link — Megan API ilə məlumat al */
+        const data = await fetch('/.netlify/functions/megan-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'yt-info', url: url.trim() }),
+        }).then(r => r.json());
 
-      // Fetch metadata always (for preview card)
-      const metaPromise = fetch('/.netlify/functions/fetch-metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
-      }).then(r => r.json()).catch(() => null);
+        if (data.status?.success && data.data) {
+          setResult({
+            status: 'youtube_ready',
+            url: url.trim(),
+            previewMeta: {
+              title: data.data.title,
+              image: data.data.thumbnail,
+              description: data.data.author || '',
+            },
+          });
+        } else {
+          setResult({
+            status: 'youtube_ready',
+            url: url.trim(),
+            previewMeta: { title: 'YouTube Video', image: null, description: '' },
+          });
+        }
 
-      if (isYouTube) {
-        // For YouTube, skip Cobalt — just set a ready result.
-        // The download URL is fetched when the user clicks a download button.
-        const meta = await metaPromise;
-        setResult({ status: 'youtube_ready', url: url.trim(), previewMeta: meta });
-      } else {
+      } else if (pid === 'tiktok') {
+        const data = await fetch('/.netlify/functions/megan-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'tiktok-info', url: url.trim() }),
+        }).then(r => r.json());
+
+        if (data.status?.success && data.data) {
+          setResult({
+            status: 'ready',
+            url: url.trim(),
+            previewMeta: {
+              title: data.data.title || data.data.author?.nickname || 'TikTok Video',
+              image: data.data.cover || data.data.author?.avatar || null,
+              description: data.data.author?.nickname || '',
+            },
+          });
+        } else {
+          setResult({ status: 'ready', url: url.trim(), previewMeta: { title: 'TikTok Video', image: null, description: '' } });
+        }
+
+      } else if (pid === 'instagram') {
+        const data = await fetch('/.netlify/functions/megan-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'instagram', url: url.trim() }),
+        }).then(r => r.json());
+
+        if (data.status?.success && data.data) {
+          setResult({
+            status: data.data.images?.length > 0 ? 'picker' : 'ready',
+            url: url.trim(),
+            previewMeta: {
+              title: data.data.title || 'Instagram Post',
+              image: data.data.thumbnail || data.data.images?.[0] || null,
+              description: '',
+            },
+            picker: data.data.images?.map(img => ({ url: img })) || [],
+          });
+        } else {
+          setResult({ status: 'ready', url: url.trim(), previewMeta: { title: 'Instagram Post', image: null, description: '' } });
+        }
+
+      } else if (pid === 'facebook') {
+        const data = await fetch('/.netlify/functions/megan-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'facebook', url: url.trim() }),
+        }).then(r => r.json());
+
+        if (data.status?.success && data.data) {
+          setResult({
+            status: 'ready',
+            url: url.trim(),
+            previewMeta: {
+              title: data.data.title || 'Facebook Video',
+              image: data.data.thumbnail || null,
+              description: '',
+            },
+          });
+        } else {
+          setResult({ status: 'ready', url: url.trim(), previewMeta: { title: 'Facebook Video', image: null, description: '' } });
+        }
+
+      } else if (pid === 'pinterest') {
+        /* Pinterest hələ də Cobalt istifadə edir */
         const [data, meta] = await Promise.all([
           fetch('/.netlify/functions/fetch-info', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: url.trim() }),
           }).then(r => r.json()),
-          metaPromise
+          fetch('/.netlify/functions/fetch-metadata', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url.trim() }),
+          }).then(r => r.json()).catch(() => null),
         ]);
 
         if (data.status === 'error') alert(data.text || t('error_fetching'));
@@ -182,8 +394,8 @@ function App() {
     finally { setLoad(false); }
   };
 
-  // Re-compute active platform with fresh translations on lang change
   const activePFull = platforms.find(p => p.id === pid) || platforms[0];
+  const isYouTube = pid === 'youtube';
 
   return (
     <>
@@ -245,67 +457,205 @@ function App() {
               </div>
             </div>
 
-            {/* Search area */}
-            <div className={`platform-search-area ${activePFull.cls}`}>
-              <form onSubmit={handleSearch}>
-                <div className={`search-wrapper ${activePFull.cls}`}>
-                  <i className="fa-solid fa-link" style={{ color: 'var(--text3)', marginLeft: '12px', fontSize: '0.9rem' }} />
-                  <input
-                    className="search-input"
-                    type="text"
-                    placeholder={activePFull.placeholder}
-                    value={url}
-                    onChange={e => setUrl(e.target.value)}
-                    autoComplete="off"
-                    spellCheck="false"
-                  />
-                  <div className="search-actions">
-                    <button type="button" onClick={handlePaste}
-                      className="btn btn-ghost"
-                      style={{ padding: '8px 14px', borderRadius: '12px', fontSize: '0.85rem' }}>
-                      <i className="fa-regular fa-clipboard" /> {t('paste')}
-                    </button>
-                    <button type="submit"
-                      className={`btn btn-${activePFull.cls}`}
-                      style={{ padding: '8px 20px', borderRadius: '12px' }}
-                      disabled={loading}>
-                      {loading ? <span className="spinner" /> : <><i className="fa-solid fa-magnifying-glass" /> {t('search')}</>}
-                    </button>
-                  </div>
+            {/* YouTube: Search or Link mode */}
+            {isYouTube ? (
+              <div className={`platform-search-area ${activePFull.cls}`}>
+                {/* Mode tabs */}
+                <div style={{ display: 'flex', gap: '0', marginBottom: '14px' }}>
+                  <button
+                    className="btn btn-ghost"
+                    style={{
+                      flex: 1, borderRadius: '12px 0 0 12px', padding: '10px',
+                      background: !searchSearched && !url ? 'var(--surface2)' : 'transparent',
+                      fontWeight: 600, fontSize: '0.85rem',
+                    }}
+                    onClick={() => { setSearchResults([]); setSearchSearched(false); setSearchQuery(''); setUrl(''); setResult(null); }}
+                  >
+                    <i className="fa-solid fa-magnifying-glass" /> {t('yt_mode_search')}
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    style={{
+                      flex: 1, borderRadius: '0 12px 12px 0', padding: '10px',
+                      background: url ? 'var(--surface2)' : 'transparent',
+                      fontWeight: 600, fontSize: '0.85rem',
+                    }}
+                    onClick={() => { setSearchResults([]); setSearchSearched(false); setSearchQuery(''); setResult(null); }}
+                  >
+                    <i className="fa-solid fa-link" /> {t('yt_mode_link')}
+                  </button>
                 </div>
-              </form>
-            </div>
+
+                {/* Search mode */}
+                {!url && (
+                  <form onSubmit={handleYouTubeSearch}>
+                    <div className={`search-wrapper ${activePFull.cls}`}>
+                      <i className="fa-solid fa-magnifying-glass" style={{ color: 'var(--text3)', marginLeft: '12px', fontSize: '0.9rem' }} />
+                      <input
+                        className="search-input"
+                        type="text"
+                        placeholder={t('yt_search_placeholder')}
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        autoComplete="off"
+                        spellCheck="false"
+                      />
+                      <div className="search-actions">
+                        <button type="submit"
+                          className={`btn btn-${activePFull.cls}`}
+                          style={{ padding: '8px 20px', borderRadius: '12px' }}
+                          disabled={searchLoading}>
+                          {searchLoading ? <span className="spinner" /> : <><i className="fa-solid fa-magnifying-glass" /> {t('search')}</>}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                {/* Link mode */}
+                {url && (
+                  <form onSubmit={handleSearch}>
+                    <div className={`search-wrapper ${activePFull.cls} ${urlError ? 'input-error' : ''}`}>
+                      <i className="fa-solid fa-link" style={{ color: 'var(--text3)', marginLeft: '12px', fontSize: '0.9rem' }} />
+                      <input
+                        className="search-input"
+                        type="text"
+                        placeholder={activePFull.placeholder}
+                        value={url}
+                        onChange={e => handleUrlChange(e.target.value)}
+                        autoComplete="off"
+                        spellCheck="false"
+                      />
+                      <div className="search-actions">
+                        <button type="button" onClick={handlePaste}
+                          className="btn btn-ghost"
+                          style={{ padding: '8px 14px', borderRadius: '12px', fontSize: '0.85rem' }}>
+                          <i className="fa-regular fa-clipboard" /> {t('paste')}
+                        </button>
+                        <button type="submit"
+                          className={`btn btn-${activePFull.cls}`}
+                          style={{ padding: '8px 20px', borderRadius: '12px' }}
+                          disabled={loading || !!urlError}>
+                          {loading ? <span className="spinner" /> : <><i className="fa-solid fa-magnifying-glass" /> {t('search')}</>}
+                        </button>
+                      </div>
+                    </div>
+                    {urlError && (
+                      <div className="url-error-msg">
+                        <i className="fa-solid fa-triangle-exclamation" /> {urlError}
+                      </div>
+                    )}
+                  </form>
+                )}
+
+                {/* YouTube search results */}
+                {searchLoading && (
+                  <div style={{ padding: '20px', textAlign: 'center' }}>
+                    <span className="spinner" style={{ borderTopColor: 'var(--text2)' }} />
+                  </div>
+                )}
+                {!searchLoading && searchSearched && searchResults.length === 0 && (
+                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text3)', fontSize: '0.9rem' }}>
+                    {t('yt_no_results')}
+                  </div>
+                )}
+                {!searchLoading && searchResults.length > 0 && (
+                  <div className="yt-search-results">
+                    {searchResults.map((item, idx) => (
+                      <motion.div
+                        key={item.videoId || idx}
+                        className="yt-search-item"
+                        onClick={() => handleSelectSearchResult(item)}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        whileHover={{ scale: 1.01 }}
+                      >
+                        <div className="yt-search-thumb">
+                          <img src={item.thumbnail} alt={item.title} onError={e => e.target.style.display = 'none'} />
+                          <span className="yt-search-duration">{item.duration}</span>
+                        </div>
+                        <div className="yt-search-info">
+                          <div className="yt-search-title">{item.title}</div>
+                          <div className="yt-search-meta">
+                            <span>{item.author}</span>
+                            <span>•</span>
+                            <span>{item.views?.toLocaleString()} {t('views')}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Other platforms: link-only mode */
+              <div className={`platform-search-area ${activePFull.cls}`}>
+                <form onSubmit={handleSearch}>
+                  <div className={`search-wrapper ${activePFull.cls} ${urlError ? 'input-error' : ''}`}>
+                    <i className="fa-solid fa-link" style={{ color: 'var(--text3)', marginLeft: '12px', fontSize: '0.9rem' }} />
+                    <input
+                      className="search-input"
+                      type="text"
+                      placeholder={activePFull.placeholder}
+                      value={url}
+                      onChange={e => handleUrlChange(e.target.value)}
+                      autoComplete="off"
+                      spellCheck="false"
+                    />
+                    <div className="search-actions">
+                      <button type="button" onClick={handlePaste}
+                        className="btn btn-ghost"
+                        style={{ padding: '8px 14px', borderRadius: '12px', fontSize: '0.85rem' }}>
+                        <i className="fa-regular fa-clipboard" /> {t('paste')}
+                      </button>
+                      <button type="submit"
+                        className={`btn btn-${activePFull.cls}`}
+                        style={{ padding: '8px 20px', borderRadius: '12px' }}
+                        disabled={loading || !!urlError}>
+                        {loading ? <span className="spinner" /> : <><i className="fa-solid fa-magnifying-glass" /> {t('search')}</>}
+                      </button>
+                    </div>
+                  </div>
+                  {urlError && (
+                    <div className="url-error-msg">
+                      <i className="fa-solid fa-triangle-exclamation" /> {urlError}
+                    </div>
+                  )}
+                </form>
+              </div>
+            )}
 
             {/* Result */}
             <AnimatePresence>
               {result && (
                 <div className={`result-card result-card-platform ${activePFull.cls}`}>
-                  <ResultCard result={result} url={url} />
+                  <ResultCard result={result} url={url} platform={pid} />
                 </div>
               )}
             </AnimatePresence>
 
             {/* Empty state */}
-            {!result && !loading && (
+            {!result && !loading && !searchLoading && searchResults.length === 0 && (
               <div style={{
                 padding: '30px 28px', background: 'var(--surface)',
                 border: '1px solid var(--border)', borderRadius: '0 0 24px 24px',
                 textAlign: 'center', color: 'var(--text3)', fontSize: '0.9rem',
               }}>
                 <i className="fa-solid fa-arrow-up" style={{ display: 'block', fontSize: '1.5rem', marginBottom: '8px', opacity: 0.4 }} />
-                {t('empty_state')}
+                {isYouTube ? t('yt_empty_state') : t('empty_state')}
               </div>
             )}
           </motion.div>
         </AnimatePresence>
       </main>
 
-      {/* ── Feedback Form ── */}
+      {/* Feedback Form */}
       <div style={{ padding: '0 20px', position: 'relative', zIndex: 1, maxWidth: '800px', margin: '0 auto 40px auto' }}>
         <FeedbackForm />
       </div>
 
-      {/* ── Stats Panel (site footer area) ── */}
+      {/* Stats Panel */}
       <div style={{ padding: '0 20px 80px', position: 'relative', zIndex: 1 }}>
         <StatsPanel />
         <div className="stats-footer">
