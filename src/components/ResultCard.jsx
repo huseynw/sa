@@ -94,13 +94,18 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
 
           const action = audioOnly ? 'tiktok-audio' : 'tiktok';
-          const data = await fetch('/.netlify/functions/megan-proxy', {
+          console.log('[TikTok DL] action:', action, 'url:', url);
+          const res = await fetch('/.netlify/functions/megan-proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, url }),
-          }).then(r => r.json());
+          });
+          console.log('[TikTok DL] response status:', res.status);
+          const data = await res.json();
+          console.log('[TikTok DL] response:', JSON.stringify(data).substring(0, 500));
 
           if (!data.status?.success) {
+            console.error('[TikTok DL] API error:', data);
             throw new Error(data.data?.error || data.error || t('error_fetching'));
           }
 
@@ -203,8 +208,9 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
         /* CDN və ya birbaşa download linkləri */
         const isDirectCdn = dlUrl.includes('googlevideo.com') || dlUrl.includes('123tokyo')
-          || dlUrl.includes('tiktokcdn') || dlUrl.includes('fbcdn')
-          || dlUrl.includes('rapidcdn') || dlUrl.includes('scontent');
+          || dlUrl.includes('tiktokcdn') || dlUrl.includes('tikcdn.io')
+          || dlUrl.includes('fbcdn') || dlUrl.includes('scontent')
+          || dlUrl.includes('rapidcdn') || dlUrl.includes('tikcdn');
 
         if (isDirectCdn) {
           /* CDN linklərində birbaşa <a> download */

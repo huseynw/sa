@@ -309,11 +309,15 @@ function App() {
         }
 
       } else if (pid === 'tiktok') {
-        const data = await fetch('/.netlify/functions/megan-proxy', {
+        console.log('[TikTok] Fetching info for:', url.trim());
+        const res = await fetch('/.netlify/functions/megan-proxy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'tiktok', url: url.trim() }),
-        }).then(r => r.json());
+        });
+        console.log('[TikTok] Response status:', res.status);
+        const data = await res.json();
+        console.log('[TikTok] Response data:', JSON.stringify(data).substring(0, 500));
 
         if (data.status?.success && data.data) {
           const d = data.data;
@@ -328,6 +332,7 @@ function App() {
           });
         } else {
           const errMsg = data.status?.error || data.data?.error || data.error || t('error_fetching');
+          console.error('[TikTok] API error:', errMsg, data);
           throw new Error(errMsg);
         }
 
@@ -396,7 +401,7 @@ function App() {
         if (data.status === 'error') alert(data.text || t('error_fetching'));
         else setResult({ ...data, previewMeta: meta });
       }
-    } catch (err) { alert(err.message || t('error_fetching')); }
+    } catch (err) { console.error('[handleSearch error]', err); alert(err.message || t('error_fetching')); }
     finally { setLoad(false); }
   };
 
