@@ -134,14 +134,27 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           /* ── Instagram: Megan API ── */
           setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
 
-          const data = await fetch('/.netlify/functions/megan-proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'instagram', url }),
-          }).then(r => r.json());
+          const MAX_IG = 3;
+          let data;
+          for (let i = 1; i <= MAX_IG; i++) {
+            console.log(`[Instagram DL] attempt ${i}/${MAX_IG}`);
+            try {
+              const res = await fetch('/.netlify/functions/megan-proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'instagram', url }),
+              });
+              data = await res.json();
+              console.log(`[Instagram DL] attempt ${i} success:`, data?.status?.success);
+              if (data.status?.success) break;
+            } catch (e) {
+              console.error(`[Instagram DL] attempt ${i} failed:`, e.message);
+            }
+            if (i < MAX_IG) await new Promise(r => setTimeout(r, 2000));
+          }
 
-          if (!data.status?.success) {
-            throw new Error(data.data?.error || data.error || t('error_fetching'));
+          if (!data?.status?.success) {
+            throw new Error(data?.data?.error || data?.error || t('error_fetching'));
           }
 
           const d = data.data;
@@ -150,7 +163,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
             setDownloading(false);
             return;
           }
-          dlUrl = d.download || d.url || d.video;
+          dlUrl = d.media?.find(m => m.type === 'video')?.url || d.download || d.url || d.video;
           dlExt = 'mp4';
 
           if (!dlUrl) throw new Error('Download URL tapılmadı');

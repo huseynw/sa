@@ -347,26 +347,44 @@ function App() {
         }
 
       } else if (pid === 'instagram') {
-        const data = await fetch('/.netlify/functions/megan-proxy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'instagram', url: url.trim() }),
-        }).then(r => r.json());
+        let data;
+        const igUrl = url.trim();
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          console.log(`[Instagram] Attempt ${attempt}/3`);
+          try {
+            const res = await fetch('/.netlify/functions/megan-proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'instagram', url: igUrl }),
+            });
+            data = await res.json();
+            console.log(`[Instagram] Attempt ${attempt} success:`, data?.status?.success);
+            if (data.status?.success && data.data) break;
+          } catch (e) {
+            console.error(`[Instagram] Attempt ${attempt} failed:`, e.message);
+          }
+          if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
+        }
 
-        if (data.status?.success && data.data) {
+        if (data?.status?.success && data.data) {
           const d = data.data;
+          const hasImages = d.images?.length > 0;
+          const hasMediaVideo = d.media?.some(m => m.type === 'video');
           setResult({
-            status: d.images?.length > 0 ? 'picker' : 'ready',
-            url: url.trim(),
+            status: hasImages ? 'picker' : 'ready',
+            url: igUrl,
             previewMeta: {
-              title: d.title || 'Instagram Post',
-              image: d.thumbnail || d.images?.[0] || null,
+              title: d.title || d.username || 'Instagram Post',
+              image: d.thumbnail || d.images?.[0] || d.media?.[0]?.url || null,
               description: '',
             },
-            picker: d.images?.map(img => ({ url: img })) || [],
+            picker: hasImages
+              ? d.images.map(img => ({ url: img }))
+              : d.media?.map(m => ({ url: m.url, type: m.type })) || [],
           });
         } else {
-          const errMsg = data.status?.error || data.data?.error || data.error || t('error_fetching');
+          const errMsg = data?.status?.error || data?.data?.error || data?.error || t('error_fetching');
+          console.error('[Instagram] All attempts failed:', errMsg);
           throw new Error(errMsg);
         }
 

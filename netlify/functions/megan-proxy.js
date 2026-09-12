@@ -7,14 +7,14 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-async function meganGet(path, params = {}) {
+async function meganGet(path, params = {}, timeout = 5000) {
   const url = new URL(`${MEGAN_BASE}${path}`);
   url.searchParams.set('apikey', API_KEY);
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   }
   const res = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(5000),
+    signal: AbortSignal.timeout(timeout),
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       'Accept': 'application/json, text/plain, */*',
@@ -94,10 +94,10 @@ export const handler = async (event) => {
 
       // ── Instagram ──
       case 'instagram':
-        data = await meganGet('/api/download/instagram', { url });
+        data = await meganGet('/api/download/instagram', { url }, 9000);
         break;
       case 'instagram-story':
-        data = await meganGet('/api/download/instagram/story', { url });
+        data = await meganGet('/api/download/instagram/story', { url }, 9000);
         break;
 
       // ── Facebook ──
