@@ -309,15 +309,20 @@ function App() {
         }
 
       } else if (pid === 'tiktok') {
-        console.log('[TikTok] Fetching info for:', url.trim());
-        const res = await fetch('/.netlify/functions/megan-proxy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'tiktok', url: url.trim() }),
-        });
-        console.log('[TikTok] Response status:', res.status);
-        const data = await res.json();
-        console.log('[TikTok] Response data:', JSON.stringify(data).substring(0, 500));
+        let data;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          console.log(`[TikTok] Attempt ${attempt}/3`);
+          setLoad(true);
+          const res = await fetch('/.netlify/functions/megan-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'tiktok', url: url.trim() }),
+          });
+          data = await res.json();
+          console.log(`[TikTok] Attempt ${attempt} success:`, data?.status?.success);
+          if (data.status?.success && data.data) break;
+          if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
+        }
 
         if (data.status?.success && data.data) {
           const d = data.data;

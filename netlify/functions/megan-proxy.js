@@ -13,25 +13,9 @@ async function meganGet(path, params = {}) {
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   }
-  let lastError;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(7000) });
-      if (!res.ok) throw new Error(`Megan API HTTP ${res.status}`);
-      const data = await res.json();
-      if (data?.status?.success === false && attempt < 2) {
-        console.error(`[megan-proxy] success=false (attempt ${attempt + 1}/3):`, data?.status?.error || 'empty response');
-        await new Promise(r => setTimeout(r, 800));
-        continue;
-      }
-      return data;
-    } catch (err) {
-      lastError = err;
-      console.error(`[megan-proxy] attempt ${attempt + 1}/3 failed for ${path}:`, err.message);
-      if (attempt < 2) await new Promise(r => setTimeout(r, 800));
-    }
-  }
-  throw lastError;
+  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`Megan API HTTP ${res.status}`);
+  return res.json();
 }
 
 export const handler = async (event) => {
