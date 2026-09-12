@@ -58,18 +58,33 @@ function TypewriterTitle() {
   );
 }
 
+/* ── Instagram URL Sanitizer ── */
+export function cleanInstagramUrl(rawUrl) {
+  if (!rawUrl) return '';
+  const trimmed = rawUrl.trim();
+  const match = trimmed.match(/https?:\/\/(?:www\.)?(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv|stories\/[a-zA-Z0-9._]+)\/([A-Za-z0-9_-]+)/i);
+  if (match) {
+    return match[0] + '/';
+  }
+  return trimmed.split('?')[0];
+}
+
 /* ── Platform URL Validation ── */
 const URL_PATTERNS = {
   youtube: /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/|clip\/|playlist\?list=)|youtu\.be\/|youtube\.com\/channel\/|youtube\.com\/@|youtube\.com\/c\/)/i,
   tiktok: /(?:tiktok\.com\/|vm\.tiktok\.com\/|tiktok\.com\/@[\w.-]+\/video\/)/i,
-  instagram: /(?:instagram\.com\/(?:p|reel|stories|tv|explore\/tags)\/|instagr\.am\/)/i,
+  instagram: /(?:instagram\.com\/(?:p|reel|reels|stories|tv|explore\/tags)\/|instagr\.am\/)/i,
   pinterest: /(?:pinterest\.com\/|pin\.it\/|pinterest\.[a-z]+\.au|pinterest\.[a-z]+\.co\.[a-z]+)/i,
   facebook: /(?:facebook\.com\/|fb\.watch\/|fb\.com\/|m\.facebook\.com\/|web\.facebook\.com\/|facebook\.com\/watch)/i,
 };
 
 function isValidUrlForPlatform(url, platform) {
   if (!url || !url.trim()) return false;
-  return URL_PATTERNS[platform]?.test(url.trim()) || false;
+  const trimmed = url.trim();
+  if (platform === 'instagram') {
+    return URL_PATTERNS.instagram.test(trimmed) || /instagram\.com|instagr\.am/i.test(trimmed);
+  }
+  return URL_PATTERNS[platform]?.test(trimmed) || false;
 }
 
 const PLATFORMS = (t) => [
@@ -176,8 +191,9 @@ function App() {
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      setUrl(text);
-      if (text.trim() && !isValidUrlForPlatform(text, pid)) {
+      const cleaned = pid === 'instagram' ? cleanInstagramUrl(text) : text;
+      setUrl(cleaned);
+      if (cleaned.trim() && !isValidUrlForPlatform(cleaned, pid)) {
         setUrlError(t('error_invalid_url_platform', { platform: activePlatform.label }));
       } else {
         setUrlError('');
@@ -347,51 +363,64 @@ function App() {
         }
 
       } else if (pid === 'instagram') {
-        const igUrl = url.trim();
-        const taskId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-
-        await fetch('/.netlify/functions-background/ig-background', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: igUrl, id: taskId }),
-        });
-
+        const cleanUrl = cleanInstagramUrl(url.trim());
         let data = null;
-        for (let i = 0; i < 30; i++) {
-          await new Promise(r => setTimeout(r, 2000));
-          console.log(`[Instagram] Polling attempt ${i + 1}/30`);
-          try {
-            const pollRes = await fetch(`/.netlify/functions/ig-poll?id=${taskId}`);
-            const pollData = await pollRes.json();
-            console.log(`[Instagram] Poll status:`, pollData.status);
+        const MAX_ATTEMPTS = 2;
 
-            if (pollData.status === 'done') {
-              data = pollData.data;
-              break;
-            } else if (pollData.status === 'error') {
-              throw new Error(pollData.error || t('error_fetching'));
-            }
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          console.log(`[Instagram] Attempt ${attempt}/${MAX_ATTEMPTS}`);
+          try {
+            const res = await fetch('/.netlify/functions/megan-proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'instagram', url: cleanUrl }),
+            });
+            data = await res.json();
+            console.log(`[Instagram] Attempt ${attempt} result:`, data?.status?.success);
+            if (data?.status?.success && data?.data) break;
           } catch (e) {
-            if (e.message && !e.message.includes('fetch')) {
-              throw e;
-            }
+            console.error(`[Instagram] Attempt ${attempt} failed:`, e.message);
           }
+          if (attempt < MAX_ATTEMPTS) await new Promise(r => setTimeout(r, 1500));
         }
 
         if (data?.status?.success && data.data) {
           const d = data.data;
-          const hasImages = d.images?.length > 0;
+          const mediaItems = Array.isArray(d.media) ? d.media : [];
+          const imagesList = Array.isArray(d.images) ? d.images : [];
+          
+          const isGallery = imagesList.length > 1 || mediaItems.length > 1;
+          const isSingleImage = imagesList.length === 1 || (mediaItems.length === 1 && mediaItems[0]?.type === 'image');
+
+          const primaryMedia = mediaItems[0] || {};
+          const downloadUrl = primaryMedia.proxyUrl || primaryMedia.url || d.download || d.url || d.video || imagesList[0];
+          const mediaType = isSingleImage ? 'image' : (primaryMedia.type || (imagesList.length > 0 ? 'image' : 'video'));
+
+          let pickerItems = [];
+          if (imagesList.length > 0) {
+            pickerItems = imagesList.map(img => ({ url: img, thumb: img }));
+          } else if (mediaItems.length > 0) {
+            pickerItems = mediaItems.map(m => ({
+              url: m.proxyUrl || m.url,
+              thumb: m.thumbnail || m.proxyUrl || m.url,
+              type: m.type,
+            }));
+          }
+
           setResult({
-            status: hasImages ? 'picker' : 'ready',
-            url: igUrl,
+            status: isGallery ? 'picker' : 'ready',
+            url: cleanUrl,
+            downloadUrl: downloadUrl,
+            proxyUrl: primaryMedia.proxyUrl || null,
+            mediaType: mediaType,
+            media: mediaItems,
             previewMeta: {
-              title: d.title || d.username || 'Instagram Post',
-              image: d.thumbnail || d.images?.[0] || d.media?.[0]?.url || null,
-              description: '',
+              title: d.title || (d.username ? `@${d.username}` : 'Instagram Post'),
+              image: d.thumbnail || primaryMedia.thumbnail || imagesList[0] || primaryMedia.url || null,
+              description: d.caption || d.description || '',
+              isImage: mediaType === 'image',
             },
-            picker: hasImages
-              ? d.images.map(img => ({ url: img }))
-              : d.media?.map(m => ({ url: m.url, type: m.type })) || [],
+            picker: pickerItems,
           });
         } else {
           const errMsg = data?.status?.error || data?.data?.error || data?.error || t('error_fetching');

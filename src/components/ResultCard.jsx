@@ -38,8 +38,14 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
   const isGallery = result?.status === 'picker';
 
   /* tabs */
-  const tabs = buildTabs(platform, isGallery, t);
+  const tabs = buildTabs(platform, isGallery, t, result);
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || 'video');
+
+  React.useEffect(() => {
+    if (tabs.length > 0 && !tabs.find(tb => tb.id === activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [result, platform]);
 
   /* mute toggle (TikTok) */
   const [muted, setMuted] = useState(false);
@@ -132,39 +138,35 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
         } else if (platform === 'instagram') {
           /* ── Instagram: Megan API ── */
-          setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
+          setProgressData({ percent: 10, speed: 'Yüklənir...' });
 
-          const MAX_IG = 3;
-          let data;
-          for (let i = 1; i <= MAX_IG; i++) {
-            console.log(`[Instagram DL] attempt ${i}/${MAX_IG}`);
-            try {
-              const res = await fetch('/.netlify/functions/megan-proxy', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'instagram', url }),
-              });
-              data = await res.json();
-              console.log(`[Instagram DL] attempt ${i} success:`, data?.status?.success);
-              if (data.status?.success) break;
-            } catch (e) {
-              console.error(`[Instagram DL] attempt ${i} failed:`, e.message);
+          if (result?.downloadUrl) {
+            dlUrl = result.downloadUrl;
+            dlExt = result.mediaType === 'image' || imageMode ? 'jpg' : 'mp4';
+          } else if (result?.media?.[0]?.url) {
+            dlUrl = result.media[0].proxyUrl || result.media[0].url;
+            dlExt = result.media[0].type === 'image' || imageMode ? 'jpg' : 'mp4';
+          } else {
+            const cleanUrl = url.trim();
+            const res = await fetch('/.netlify/functions/megan-proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'instagram', url: cleanUrl }),
+            });
+            const data = await res.json();
+            if (!data?.status?.success) {
+              throw new Error(data?.data?.error || data?.error || t('error_fetching'));
             }
-            if (i < MAX_IG) await new Promise(r => setTimeout(r, 2000));
+            const d = data.data;
+            if (d.images?.length > 1) {
+              alert('Gallery üçün əvvəlcə şəkilləri seçin.');
+              setDownloading(false);
+              return;
+            }
+            const primary = d.media?.[0];
+            dlUrl = primary?.proxyUrl || primary?.url || d.download || d.url || d.video || d.images?.[0];
+            dlExt = (primary?.type === 'image' || d.images?.length > 0 || imageMode) ? 'jpg' : 'mp4';
           }
-
-          if (!data?.status?.success) {
-            throw new Error(data?.data?.error || data?.error || t('error_fetching'));
-          }
-
-          const d = data.data;
-          if (d.images?.length > 0) {
-            alert('Gallery üçün əvvəlcə şəkilləri seçin.');
-            setDownloading(false);
-            return;
-          }
-          dlUrl = d.media?.find(m => m.type === 'video')?.url || d.download || d.url || d.video;
-          dlExt = 'mp4';
 
           if (!dlUrl) throw new Error('Download URL tapılmadı');
 
@@ -385,6 +387,9 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
         {platform === 'instagram' && activeTab === 'video' && !isGallery && (
           <VideoTab downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} isReels={true} />
         )}
+        {platform === 'instagram' && activeTab === 'image' && !isGallery && (
+          <ImageTab downloading={downloading} onDownload={handleDownload} btnCls={meta.btnCls} />
+        )}
         {platform === 'instagram' && activeTab === 'images' && isGallery && (
           <GalleryTab
             items={result.picker}
@@ -415,7 +420,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 };
 
 /* ───────────────── Build tabs per platform ───────────────── */
-function buildTabs(platform, isGallery, t) {
+function buildTabs(platform, isGallery, t, result) {
   if (platform === 'youtube') return [
     { id: 'mp3',       label: t('tab_mp3'),       icon: 'fa-solid fa-music' },
     { id: 'video',     label: t('tab_video'),     icon: 'fa-solid fa-video' },
@@ -431,6 +436,9 @@ function buildTabs(platform, isGallery, t) {
   }
   if (platform === 'instagram') {
     if (isGallery) return [{ id: 'images', label: t('tab_images'), icon: 'fa-solid fa-images' }];
+    if (result?.mediaType === 'image' || result?.previewMeta?.isImage) {
+      return [{ id: 'image', label: t('btn_image') || 'Şəkil', icon: 'fa-solid fa-image' }];
+    }
     return [
       { id: 'video', label: t('tab_reels'), icon: 'fa-solid fa-video' },
     ];

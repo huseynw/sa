@@ -7,6 +7,15 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json',
 };
 
+function cleanInstagramUrl(rawUrl) {
+  if (!rawUrl) return '';
+  const match = rawUrl.match(/https?:\/\/(?:www\.)?(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv|stories\/[a-zA-Z0-9._]+)\/([A-Za-z0-9_-]+)/i);
+  if (match) {
+    return match[0] + '/';
+  }
+  return rawUrl.split('?')[0].trim();
+}
+
 async function meganGet(path, params = {}, timeout = 5000) {
   const url = new URL(`${MEGAN_BASE}${path}`);
   url.searchParams.set('apikey', API_KEY);
@@ -93,12 +102,16 @@ export const handler = async (event) => {
         break;
 
       // ── Instagram ──
-      case 'instagram':
-        data = await meganGet('/api/download/instagram', { url }, 13000);
+      case 'instagram': {
+        const cleanUrl = cleanInstagramUrl(url);
+        data = await meganGet('/api/download/instagram', { url: cleanUrl }, 25000);
         break;
-      case 'instagram-story':
-        data = await meganGet('/api/download/instagram/story', { url }, 13000);
+      }
+      case 'instagram-story': {
+        const cleanUrl = cleanInstagramUrl(url);
+        data = await meganGet('/api/download/instagram/story', { url: cleanUrl }, 25000);
         break;
+      }
 
       // ── Facebook ──
       case 'facebook':
