@@ -94,10 +94,10 @@ export const handler = async (event) => {
 
       // ── Instagram ──
       case 'instagram':
-        data = await meganGet('/api/download/instagram', { url }, 9000);
+        data = await meganGet('/api/download/instagram', { url }, 13000);
         break;
       case 'instagram-story':
-        data = await meganGet('/api/download/instagram/story', { url }, 9000);
+        data = await meganGet('/api/download/instagram/story', { url }, 13000);
         break;
 
       // ── Facebook ──
