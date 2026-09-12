@@ -7,15 +7,33 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-async function meganGet(path, params = {}) {
+async function meganGet(path, params = {}, retries = 2) {
   const url = new URL(`${MEGAN_BASE}${path}`);
   url.searchParams.set('apikey', API_KEY);
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   }
-  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(30000) });
-  if (!res.ok) throw new Error(`Megan API HTTP ${res.status}`);
-  return res.json();
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(30000) });
+      if (!res.ok) throw new Error(`Megan API HTTP ${res.status}`);
+      const data = await res.json();
+      if (data?.status?.success === false && attempt < retries) {
+        console.error(`[megan-proxy] API returned success=false (attempt ${attempt + 1}/${retries + 1}):`, data?.status?.error || 'unknown');
+        await new Promise(r => setTimeout(r, 1500));
+        continue;
+      }
+      return data;
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        console.error(`[megan-proxy] Retry ${attempt + 1}/${retries} for ${path}:`, err.message);
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+  }
+  throw lastError;
 }
 
 export const handler = async (event) => {
