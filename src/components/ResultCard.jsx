@@ -84,7 +84,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
             throw new Error(data.data?.error || data.error || t('error_fetching'));
           }
 
-          dlUrl = data.data.proxyUrl || data.data.downloadUrl;
+          dlUrl = data.data.downloadUrl || data.data.proxyUrl;
           dlExt = audioOnly ? 'mp3' : 'mp4';
 
           if (!dlUrl) throw new Error('Download URL tapılmadı');
@@ -200,13 +200,23 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        /* Megan API proxy URL-ləri və ya YouTube CDN linkləri birbaşa açılır */
-        const isMeganProxy = dlUrl.includes('megan-apis') || dlUrl.includes('render.com');
-        const isYouTubeCdn = dlUrl.includes('googlevideo.com') || dlUrl.includes('123tokyo');
+        /* CDN və ya birbaşa download linkləri */
+        const isDirectCdn = dlUrl.includes('googlevideo.com') || dlUrl.includes('123tokyo')
+          || dlUrl.includes('tiktokcdn') || dlUrl.includes('fbcdn')
+          || dlUrl.includes('rapidcdn') || dlUrl.includes('scontent');
 
-        if (isMeganProxy || isYouTubeCdn) {
+        if (isDirectCdn) {
+          /* CDN linklərində birbaşa <a> download */
           setProgressData({ percent: 100, speed: 'Yüklənir...' });
-          window.location.href = dlUrl;
+          const a = document.createElement('a');
+          a.href = dlUrl;
+          a.download = safeName;
+          a.target = '_blank';
+          a.rel = 'noreferrer';
+          a.referrerPolicy = 'no-referrer';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
         } else {
           /* XHR download (progress tracking ilə) */
           try {
