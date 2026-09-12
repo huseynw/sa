@@ -433,7 +433,27 @@ function App() {
                 });
                 return;
               }
-            } else if (cobaltData?.text || cobaltData?.error) {
+            }
+
+            // Əgər Cobalt boş və ya xəta veribsə, lakin metadata vasitəsilə post şəkli tapılıbsa:
+            if (meta && meta.image) {
+              console.log('[Instagram Post] Metadata şəkli istifadə olunur:', meta.image);
+              setResult({
+                status: 'ready',
+                url: cleanUrl,
+                downloadUrl: meta.image,
+                mediaType: 'image',
+                previewMeta: {
+                  title: meta.title || 'Instagram Post',
+                  image: meta.image,
+                  description: meta.description || '',
+                  isImage: true,
+                },
+              });
+              return;
+            }
+
+            if (cobaltData?.text || cobaltData?.error) {
               throw new Error(cobaltData.text || cobaltData.details || cobaltData.error);
             }
           } catch (postErr) {

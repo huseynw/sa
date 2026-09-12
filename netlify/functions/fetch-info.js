@@ -22,11 +22,12 @@ export const handler = async (event, context) => {
       };
     }
 
+    const isInstagram = url.includes('instagram.com') || url.includes('instagr.am');
     const cobaltPayload = {
       url: url,
       videoQuality: quality === "max" ? "max" : (quality || "max"),
       filenameStyle: "nerdy",
-      alwaysProxy: true
+      alwaysProxy: !isInstagram
     };
 
     if (isMuted) {
