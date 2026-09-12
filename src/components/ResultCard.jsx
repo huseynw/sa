@@ -228,33 +228,25 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           } catch {}
         }
 
-        const safeName = `${getBaseName()}.${dlExt}`;
+        const baseTitle = getBaseName();
+        const safeName = `${baseTitle}.${dlExt}`;
 
-        // Videolar və MP3-lər brauzerdə önizləmə kimi açılmasın deyə proxy vasitəsilə birbaşa cihazın yaddaşına yüklənir
-        const needsProxy = !imageMode && (
-          platform === 'youtube'
-          || (platform === 'tiktok' && (audioOnly || dlExt === 'mp3' || dlUrl.includes('tiktokcdn') || dlUrl.includes('tikwm') || dlUrl.includes('tikcdn')))
-          || dlUrl.includes('googlevideo.com')
-          || dlUrl.includes('tiktokcdn')
-          || dlUrl.includes('tikcdn.io')
-          || dlUrl.includes('tikcdn')
-          || dlUrl.includes('fbcdn')
-          || dlUrl.includes('scontent')
-          || dlUrl.includes('123tokyo')
-          || dlUrl.includes('rapidcdn')
-        );
+        // Google Video birbaşa attachment göndərsin və önizləmə pleyeri açmasın deyə &title parametri əlavə olunur
+        let finalDlUrl = dlUrl;
+        if (finalDlUrl.includes('googlevideo.com') && !finalDlUrl.includes('&title=')) {
+          const cleanTitleOnly = baseTitle.replace(/[^\w\s-]/g, '').trim().substring(0, 50) || 'video';
+          finalDlUrl = `${finalDlUrl}&title=${encodeURIComponent(cleanTitleOnly)}`;
+        }
 
-        const finalUrl = needsProxy
-          ? `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(dlUrl)}&filename=${encodeURIComponent(safeName)}&audio=${audioOnly || dlExt === 'mp3'}`
-          : dlUrl;
-
-        /* XHR download (faylı birbaşa Blob kimi yükləyir, önizləmə səhifəsinə atmır) */
+        /* 1. Birinci XHR ilə Blob yükləməsi cəhd edilir (MP3 və CORS-a icazə verən CDN-lər üçün birbaşa brauzer yaddaşına) */
         try {
-          await downloadFile(finalUrl, safeName, (prog) => setProgressData(prog));
+          await downloadFile(finalDlUrl, safeName, (prog) => setProgressData(prog));
         } catch (downloadErr) {
-          console.warn('XHR download failed, falling back to direct link:', downloadErr);
+          console.warn('XHR download failed, using direct attachment link:', downloadErr);
+          setProgressData({ percent: 100, speed: 'Yüklənir...' });
+          // CORS xətası verən CDN-lər üçün (target="_blank" OLMADAN, birbaşa fayl kimi yükləyir)
           const a = document.createElement('a');
-          a.href = finalUrl;
+          a.href = finalDlUrl;
           a.download = safeName;
           document.body.appendChild(a);
           a.click();
