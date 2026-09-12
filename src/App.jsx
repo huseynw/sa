@@ -310,25 +310,29 @@ function App() {
 
       } else if (pid === 'tiktok') {
         let data;
+        const tiktokUrl = url.trim();
         for (let attempt = 1; attempt <= 3; attempt++) {
           console.log(`[TikTok] Attempt ${attempt}/3`);
-          setLoad(true);
-          const res = await fetch('/.netlify/functions/megan-proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'tiktok', url: url.trim() }),
-          });
-          data = await res.json();
-          console.log(`[TikTok] Attempt ${attempt} success:`, data?.status?.success);
-          if (data.status?.success && data.data) break;
+          try {
+            const res = await fetch('/.netlify/functions/megan-proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'tiktok', url: tiktokUrl }),
+            });
+            data = await res.json();
+            console.log(`[TikTok] Attempt ${attempt} success:`, data?.status?.success);
+            if (data.status?.success && data.data) break;
+          } catch (e) {
+            console.error(`[TikTok] Attempt ${attempt} failed:`, e.message);
+          }
           if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
         }
 
-        if (data.status?.success && data.data) {
+        if (data?.status?.success && data.data) {
           const d = data.data;
           setResult({
             status: 'ready',
-            url: url.trim(),
+            url: tiktokUrl,
             previewMeta: {
               title: d.title || 'TikTok Video',
               image: d.cover || d.author?.avatar || null,
@@ -336,8 +340,8 @@ function App() {
             },
           });
         } else {
-          const errMsg = data.status?.error || data.data?.error || data.error || t('error_fetching');
-          console.error('[TikTok] API error:', errMsg, data);
+          const errMsg = data?.status?.error || data?.data?.error || data?.error || t('error_fetching');
+          console.error('[TikTok] All attempts failed:', errMsg);
           throw new Error(errMsg);
         }
 

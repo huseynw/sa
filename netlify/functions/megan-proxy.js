@@ -13,7 +13,14 @@ async function meganGet(path, params = {}) {
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   }
-  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) });
+  const res = await fetch(url.toString(), {
+    signal: AbortSignal.timeout(8000),
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      'Referer': 'https://apis.megan.qzz.io/',
+      'Accept': 'application/json',
+    },
+  });
   if (!res.ok) throw new Error(`Megan API HTTP ${res.status}`);
   return res.json();
 }
