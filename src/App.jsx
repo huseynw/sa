@@ -364,67 +364,12 @@ function App() {
 
       } else if (pid === 'instagram') {
         const cleanUrl = cleanInstagramUrl(url.trim());
-        let data = null;
-        const MAX_ATTEMPTS = 2;
+        const isPost = /\/p\/[A-Za-z0-9_-]+/i.test(cleanUrl);
+        console.log(`[Instagram] URL: ${cleanUrl}, isPost: ${isPost}`);
 
-        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-          console.log(`[Instagram] Attempt ${attempt}/${MAX_ATTEMPTS}`);
-          try {
-            const res = await fetch('/.netlify/functions/megan-proxy', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'instagram', url: cleanUrl }),
-            });
-            data = await res.json();
-            console.log(`[Instagram] Attempt ${attempt} result:`, data?.status?.success);
-            if (data?.status?.success && data?.data) break;
-          } catch (e) {
-            console.error(`[Instagram] Attempt ${attempt} failed:`, e.message);
-          }
-          if (attempt < MAX_ATTEMPTS) await new Promise(r => setTimeout(r, 1500));
-        }
-
-        if (data?.status?.success && data.data) {
-          const d = data.data;
-          const mediaItems = Array.isArray(d.media) ? d.media : [];
-          const imagesList = Array.isArray(d.images) ? d.images : [];
-          
-          const isGallery = imagesList.length > 1 || mediaItems.length > 1;
-          const isSingleImage = imagesList.length === 1 || (mediaItems.length === 1 && mediaItems[0]?.type === 'image');
-
-          const primaryMedia = mediaItems[0] || {};
-          const downloadUrl = primaryMedia.proxyUrl || primaryMedia.url || d.download || d.url || d.video || imagesList[0];
-          const mediaType = isSingleImage ? 'image' : (primaryMedia.type || (imagesList.length > 0 ? 'image' : 'video'));
-
-          let pickerItems = [];
-          if (imagesList.length > 0) {
-            pickerItems = imagesList.map(img => ({ url: img, thumb: img }));
-          } else if (mediaItems.length > 0) {
-            pickerItems = mediaItems.map(m => ({
-              url: m.proxyUrl || m.url,
-              thumb: m.thumbnail || m.proxyUrl || m.url,
-              type: m.type,
-            }));
-          }
-
-          setResult({
-            status: isGallery ? 'picker' : 'ready',
-            url: cleanUrl,
-            downloadUrl: downloadUrl,
-            proxyUrl: primaryMedia.proxyUrl || null,
-            mediaType: mediaType,
-            media: mediaItems,
-            previewMeta: {
-              title: d.title || (d.username ? `@${d.username}` : 'Instagram Post'),
-              image: d.thumbnail || primaryMedia.thumbnail || imagesList[0] || primaryMedia.url || null,
-              description: d.caption || d.description || '',
-              isImage: mediaType === 'image',
-            },
-            picker: pickerItems,
-          });
-        } else {
-          // Megan API post yükləyə bilmədikdə (şəkil/karusel postları üçün) xüsusi ehtiyat API
-          console.log('[Instagram] Megan API postu yükləyə bilmədi, post üçün Cobalt API çağırılır...');
+        if (isPost) {
+          /* ── Postlar (şəkil və karusellər) üçün xüsusi Post API ── */
+          console.log('[Instagram] Post linki aşkarlandı, birbaşa Post API istifadə olunur...');
           try {
             const [cobaltData, meta] = await Promise.all([
               fetch('/.netlify/functions/fetch-info', {
@@ -476,14 +421,79 @@ function App() {
                 });
                 return;
               }
+            } else if (cobaltData?.text || cobaltData?.error) {
+              throw new Error(cobaltData.text || cobaltData.details || cobaltData.error);
             }
-          } catch (fallbackErr) {
-            console.error('[Instagram] Post fallback xətası:', fallbackErr);
+          } catch (postErr) {
+            console.error('[Instagram Post] Xəta:', postErr.message);
+            throw new Error(postErr.message || t('error_fetching'));
+          }
+        } else {
+          /* ── Reels və Videolar üçün Megan API ── */
+          console.log('[Instagram] Reel/Video linki aşkarlandı, Megan API istifadə olunur...');
+          let data = null;
+          const MAX_ATTEMPTS = 2;
+
+          for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            console.log(`[Instagram Megan] Attempt ${attempt}/${MAX_ATTEMPTS}`);
+            try {
+              const res = await fetch('/.netlify/functions/megan-proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'instagram', url: cleanUrl }),
+              });
+              data = await res.json();
+              console.log(`[Instagram Megan] Attempt ${attempt} result:`, data?.status?.success);
+              if (data?.status?.success && data?.data) break;
+            } catch (e) {
+              console.error(`[Instagram Megan] Attempt ${attempt} failed:`, e.message);
+            }
+            if (attempt < MAX_ATTEMPTS) await new Promise(r => setTimeout(r, 1500));
           }
 
-          const errMsg = data?.status?.error || data?.data?.error || data?.error || t('error_fetching');
-          console.error('[Instagram] Failed:', errMsg);
-          throw new Error(errMsg);
+          if (data?.status?.success && data.data) {
+            const d = data.data;
+            const mediaItems = Array.isArray(d.media) ? d.media : [];
+            const imagesList = Array.isArray(d.images) ? d.images : [];
+            
+            const isGallery = imagesList.length > 1 || mediaItems.length > 1;
+            const isSingleImage = imagesList.length === 1 || (mediaItems.length === 1 && mediaItems[0]?.type === 'image');
+
+            const primaryMedia = mediaItems[0] || {};
+            const downloadUrl = primaryMedia.proxyUrl || primaryMedia.url || d.download || d.url || d.video || imagesList[0];
+            const mediaType = isSingleImage ? 'image' : (primaryMedia.type || (imagesList.length > 0 ? 'image' : 'video'));
+
+            let pickerItems = [];
+            if (imagesList.length > 0) {
+              pickerItems = imagesList.map(img => ({ url: img, thumb: img }));
+            } else if (mediaItems.length > 0) {
+              pickerItems = mediaItems.map(m => ({
+                url: m.proxyUrl || m.url,
+                thumb: m.thumbnail || m.proxyUrl || m.url,
+                type: m.type,
+              }));
+            }
+
+            setResult({
+              status: isGallery ? 'picker' : 'ready',
+              url: cleanUrl,
+              downloadUrl: downloadUrl,
+              proxyUrl: primaryMedia.proxyUrl || null,
+              mediaType: mediaType,
+              media: mediaItems,
+              previewMeta: {
+                title: d.title || (d.username ? `@${d.username}` : 'Instagram Post'),
+                image: d.thumbnail || primaryMedia.thumbnail || imagesList[0] || primaryMedia.url || null,
+                description: d.caption || d.description || '',
+                isImage: mediaType === 'image',
+              },
+              picker: pickerItems,
+            });
+          } else {
+            const errMsg = data?.status?.error || data?.data?.error || data?.error || t('error_fetching');
+            console.error('[Instagram] Failed:', errMsg);
+            throw new Error(errMsg);
+          }
         }
 
       } else if (pid === 'facebook') {
