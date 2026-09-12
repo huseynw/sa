@@ -279,36 +279,46 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
     );
 
   const downloadSelectedImgs = async () => {
-    setDownloading(true);
-    setProgressData({ percent: 0, speed: 0 });
-    const baseName = getBaseName();
-    for (let i = 0; i < selectedImgs.length; i++) {
-      setProgressData({ percent: Math.round((i / selectedImgs.length) * 100), speed: 0 });
-      let ext = 'jpg';
-      if (imgUrl.includes('.webp') || imgUrl.includes('webp')) ext = 'webp';
-      else if (imgUrl.includes('.png')) ext = 'png';
-      const safeName = `${baseName}_${i + 1}.${ext}`;
-      try {
-        await downloadFile(imgUrl, safeName, () => {});
-      } catch (err) {
-        console.warn('XHR failed, using direct download:', err);
-        const a = document.createElement('a');
-        a.href = imgUrl;
-        a.download = safeName;
-        a.target = '_blank';
-        a.rel = 'noreferrer';
-        a.referrerPolicy = 'no-referrer';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+    try {
+      setDownloading(true);
+      setProgressData({ percent: 0, speed: 0 });
+      const baseName = getBaseName();
+      for (let i = 0; i < selectedImgs.length; i++) {
+        setProgressData({ percent: Math.round((i / selectedImgs.length) * 100), speed: 0 });
+        const imgUrl = selectedImgs[i];
+        if (!imgUrl) continue;
+
+        let ext = 'jpg';
+        if (imgUrl.includes('.webp') || imgUrl.includes('webp')) ext = 'webp';
+        else if (imgUrl.includes('.png')) ext = 'png';
+        const safeName = `${baseName}_${i + 1}.${ext}`;
+
+        try {
+          await downloadFile(imgUrl, safeName, () => {});
+        } catch (err) {
+          console.warn('XHR failed, using direct download:', err);
+          const a = document.createElement('a');
+          a.href = imgUrl;
+          a.download = safeName;
+          a.target = '_blank';
+          a.rel = 'noreferrer';
+          a.referrerPolicy = 'no-referrer';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
       }
+      setProgressData({ percent: 100, speed: 0 });
+    } catch (e) {
+      console.error('Gallery download error:', e);
+      alert('Şəkil yüklənərkən xəta baş verdi: ' + e.message);
+    } finally {
+      setTimeout(() => {
+        setDownloading(false);
+        setProgressData(null);
+        setSelectedImgs([]);
+      }, 1000);
     }
-    setProgressData({ percent: 100, speed: 0 });
-    setTimeout(() => {
-      setDownloading(false);
-      setProgressData(null);
-      setSelectedImgs([]);
-    }, 1000);
   };
 
   /* ── YouTube thumbnail ── */
