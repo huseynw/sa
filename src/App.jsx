@@ -371,18 +371,30 @@ function App() {
           /* ── Postlar (şəkil və karusellər) üçün xüsusi Post API ── */
           console.log('[Instagram] Post linki aşkarlandı, birbaşa Post API istifadə olunur...');
           try {
-            const [cobaltData, meta] = await Promise.all([
-              fetch('/.netlify/functions/fetch-info', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: cleanUrl, quality: 'max' }),
-              }).then(r => r.json()),
-              fetch('/.netlify/functions/fetch-metadata', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: cleanUrl }),
-              }).then(r => r.json()).catch(() => null),
-            ]);
+            let cobaltData = null;
+            const metaPromise = fetch('/.netlify/functions/fetch-metadata', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: cleanUrl }),
+            }).then(r => r.json()).catch(() => null);
+
+            for (let a = 1; a <= 2; a++) {
+              try {
+                console.log(`[Instagram Post] Cəhd ${a}/2...`);
+                const res = await fetch('/.netlify/functions/fetch-info', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: cleanUrl, quality: 'max' }),
+                });
+                cobaltData = await res.json();
+                if (cobaltData && (cobaltData.status === 'picker' || cobaltData.url)) break;
+              } catch (err) {
+                console.warn(`[Instagram Post] Cəhd ${a} xətası:`, err.message);
+              }
+              if (a < 2) await new Promise(r => setTimeout(r, 2000));
+            }
+
+            const meta = await metaPromise;
 
             if (cobaltData && (cobaltData.status === 'picker' || cobaltData.url)) {
               if (cobaltData.status === 'picker' && Array.isArray(cobaltData.picker)) {

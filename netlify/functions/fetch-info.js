@@ -72,11 +72,12 @@ export const handler = async (event, context) => {
           reqHeaders["Authorization"] = `Api-Key ${cobaltToken}`;
         }
 
+        const timeoutMs = targetUrl === process.env.COBALT_API_URL ? 25000 : 8000;
         const response = await fetch(targetUrl, {
           method: "POST",
           headers: reqHeaders,
           body: JSON.stringify(cobaltPayload),
-          signal: AbortSignal.timeout(7000) // 7s timeout per instance
+          signal: AbortSignal.timeout(timeoutMs)
         });
 
         if (!response.ok) {
@@ -117,7 +118,7 @@ export const handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "Failed to fetch information." })
+      body: JSON.stringify({ error: error.message || "Failed to fetch information." })
     };
   }
 };
