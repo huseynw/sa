@@ -115,7 +115,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
             dlExt = 'mp3';
           } else {
             /* Megan API TikTok: videoUrlNoWatermark > videoUrl > download */
-            dlUrl = d.videoUrlNoWatermark || d.videoUrl || d.download || d.url || d.hdplay || d.play;
+            dlUrl = d.videoUrl || d.videoUrlNoWatermark || d.download || d.url || d.hdplay || d.play;
             dlExt = 'mp4';
           }
 
