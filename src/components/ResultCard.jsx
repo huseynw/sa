@@ -221,8 +221,8 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
         if (imageMode || dlExt === 'jpg') {
           try {
             const urlPath = new URL(dlUrl).pathname.toLowerCase();
-            if (urlPath.endsWith('.png')) dlExt = 'png';
-            else if (urlPath.endsWith('.webp')) dlExt = 'webp';
+            if (urlPath.endsWith('.png')) dlExt = 'jpg'; // PNG da JPG-ə çevrilir (downloader.js)
+            else if (urlPath.endsWith('.webp')) dlExt = 'jpg'; // WebP iPhone-da açılmır, JPG-ə çevrilir
             else if (urlPath.endsWith('.jpeg') || urlPath.endsWith('.jpg')) dlExt = 'jpg';
             else if (urlPath.endsWith('.gif')) dlExt = 'gif';
           } catch {}
@@ -230,11 +230,11 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        /* CDN və ya birbaşa download linkləri */
-        const isDirectCdn = dlUrl.includes('googlevideo.com') || dlUrl.includes('123tokyo')
+        /* CDN və ya birbaşa download linkləri (videolar üçün) */
+        const isDirectCdn = (dlUrl.includes('googlevideo.com') || dlUrl.includes('123tokyo')
           || dlUrl.includes('tiktokcdn') || dlUrl.includes('tikcdn.io')
           || dlUrl.includes('fbcdn') || dlUrl.includes('scontent')
-          || dlUrl.includes('rapidcdn') || dlUrl.includes('tikcdn');
+          || dlUrl.includes('rapidcdn') || dlUrl.includes('tikcdn')) && !imageMode && dlExt !== 'jpg';
 
         if (isDirectCdn) {
           /* CDN linklərində birbaşa <a> download */
@@ -288,9 +288,8 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
         const imgUrl = selectedImgs[i];
         if (!imgUrl) continue;
 
-        let ext = 'jpg';
-        if (imgUrl.includes('.webp') || imgUrl.includes('webp')) ext = 'webp';
-        else if (imgUrl.includes('.png')) ext = 'png';
+        // Həmişə JPG istifadə et — downloader.js canvas vasitəsilə WebP/PNG-ni JPG-ə çevirir
+        const ext = 'jpg';
         const safeName = `${baseName}_${i + 1}.${ext}`;
 
         try {
