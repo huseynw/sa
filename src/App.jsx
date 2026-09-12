@@ -352,14 +352,35 @@ function App() {
 
         if (data?.status?.success && data.data) {
           const d = data.data;
+
+          const imagesList = Array.isArray(d.images) && d.images.length > 0 ? d.images
+            : Array.isArray(d.photos) && d.photos.length > 0 ? d.photos
+            : Array.isArray(d.slides) && d.slides.length > 0 ? d.slides
+            : Array.isArray(d.album) && d.album.length > 0 ? d.album
+            : [];
+
+          const isGallery = imagesList.length > 0;
+          let pickerItems = [];
+          if (isGallery) {
+            pickerItems = imagesList.map((img, idx) => {
+              const imgUrl = typeof img === 'string' ? img : (img.url || img.thumbnail || img.play_url || img);
+              return { url: imgUrl, thumb: imgUrl, type: 'image', id: idx };
+            });
+          }
+
           setResult({
-            status: 'ready',
+            status: isGallery ? 'picker' : 'ready',
             url: tiktokUrl,
+            downloadUrl: isGallery ? pickerItems[0]?.url : (d.videoUrl || d.download || d.video || d.play || null),
+            mediaType: isGallery ? 'image' : 'video',
+            musicUrl: d.music || null,
             previewMeta: {
-              title: d.title || 'TikTok Video',
-              image: d.cover || d.author?.avatar || null,
-              description: d.author?.nickname || '',
+              title: d.title || (isGallery ? 'TikTok Şəkillər' : 'TikTok Video'),
+              image: isGallery ? (pickerItems[0]?.thumb || d.cover) : (d.cover || d.author?.avatar || null),
+              description: d.author?.nickname || d.author?.unique_id || '',
+              isImage: isGallery,
             },
+            picker: pickerItems,
           });
         } else {
           const errMsg = data?.status?.error || data?.data?.error || data?.error || t('error_fetching');

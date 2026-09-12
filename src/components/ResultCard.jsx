@@ -45,6 +45,11 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
     if (tabs.length > 0 && !tabs.find(tb => tb.id === activeTab)) {
       setActiveTab(tabs[0].id);
     }
+    if (result?.picker && Array.isArray(result.picker)) {
+      setSelectedImgs(result.picker.map(item => item.url));
+    } else {
+      setSelectedImgs([]);
+    }
   }, [result, platform]);
 
   /* mute toggle (TikTok) */
@@ -388,13 +393,14 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           <GalleryTab
             items={result.picker}
             selectedImgs={selectedImgs}
+            setSelectedImgs={setSelectedImgs}
             toggleImg={toggleImg}
             downloading={downloading}
             onDownloadSelected={downloadSelectedImgs}
             onDownloadAudio={() => handleDownload({ audioOnly: true })}
             pcCls={meta.cls}
             btnCls={meta.btnCls}
-            hasAudio={false}
+            hasAudio={!!result.musicUrl}
           />
         )}
 
@@ -409,6 +415,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           <GalleryTab
             items={result.picker}
             selectedImgs={selectedImgs}
+            setSelectedImgs={setSelectedImgs}
             toggleImg={toggleImg}
             downloading={downloading}
             onDownloadSelected={downloadSelectedImgs}
@@ -442,12 +449,17 @@ function buildTabs(platform, isGallery, t, result) {
     { id: 'thumbnail', label: 'Thumbnail', icon: 'fa-solid fa-image' },
   ];
   if (platform === 'tiktok') {
-    const tabs = [
+    if (isGallery) {
+      return [
+        { id: 'images', label: t('tab_images') || 'Şəkillər', icon: 'fa-solid fa-images' },
+        { id: 'mp3',   label: 'MP3',          icon: 'fa-solid fa-music' },
+        { id: 'video', label: t('tab_video'), icon: 'fa-solid fa-video' },
+      ];
+    }
+    return [
       { id: 'video', label: t('tab_video'), icon: 'fa-solid fa-video' },
       { id: 'mp3',   label: 'MP3',          icon: 'fa-solid fa-music' },
     ];
-    if (isGallery) tabs.push({ id: 'images', label: t('tab_images'), icon: 'fa-solid fa-images' });
-    return tabs;
   }
   if (platform === 'instagram') {
     if (isGallery) return [{ id: 'images', label: t('tab_images'), icon: 'fa-solid fa-images' }];
@@ -575,16 +587,37 @@ const ImageTab = ({ downloading, onDownload, btnCls }) => {
   </div>
 );};
 
-const GalleryTab = ({ items, selectedImgs, toggleImg, downloading, onDownloadSelected, onDownloadAudio, pcCls, btnCls, hasAudio }) => {
+const GalleryTab = ({ items, selectedImgs, setSelectedImgs, toggleImg, downloading, onDownloadSelected, onDownloadAudio, pcCls, btnCls, hasAudio }) => {
   const { t } = useTranslation();
+  const allSelected = items && items.length > 0 && selectedImgs.length === items.length;
+
   return (
   <div>
-    <div style={{ fontSize: '0.85rem', color: 'var(--text2)', marginBottom: '12px' }}>
-      <i className="fa-solid fa-hand-pointer" style={{ marginRight: 6 }} />
-      {t('gallery_info', { count: selectedImgs.length })}
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+      <div style={{ fontSize: '0.85rem', color: 'var(--text2)' }}>
+        <i className="fa-solid fa-hand-pointer" style={{ marginRight: 6 }} />
+        {t('gallery_info', { count: selectedImgs.length })}
+      </div>
+      {items && items.length > 1 && setSelectedImgs && (
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ fontSize: '0.8rem', padding: '4px 10px', borderRadius: '8px' }}
+          onClick={() => {
+            if (allSelected) {
+              setSelectedImgs([]);
+            } else {
+              setSelectedImgs(items.map(i => i.url));
+            }
+          }}
+        >
+          <i className={allSelected ? "fa-regular fa-square" : "fa-regular fa-square-check"} style={{ marginRight: 5 }} />
+          {allSelected ? 'Seçimi təmizlə' : 'Hamısını seç'}
+        </button>
+      )}
     </div>
     <div className="image-grid">
-      {items.map((item, idx) => {
+      {items && items.map((item, idx) => {
         const imgUrl = item.url;
         const thumbSrc = item.thumb || item.url;
         const sel = selectedImgs.includes(imgUrl);
@@ -597,10 +630,10 @@ const GalleryTab = ({ items, selectedImgs, toggleImg, downloading, onDownloadSel
         );
       })}
     </div>
-    <div className="action-row" style={{ marginTop: '4px' }}>
+    <div className="action-row" style={{ marginTop: '12px' }}>
       <button className={`btn ${btnCls}`} disabled={downloading || selectedImgs.length === 0}
         onClick={onDownloadSelected}>
-        {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-images" /> {t('btn_selected', { count: selectedImgs.length })}</>}
+        {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-download" /> {t('btn_selected', { count: selectedImgs.length })}</>}
       </button>
       {hasAudio && onDownloadAudio && (
         <button className="btn btn-ghost" disabled={downloading} onClick={onDownloadAudio}>
