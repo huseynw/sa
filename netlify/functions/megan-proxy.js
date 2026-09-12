@@ -33,6 +33,40 @@ async function meganGet(path, params = {}, timeout = 5000) {
   return res.json();
 }
 
+async function searchYouTubeDirect(query) {
+  const res = await fetch(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'az,en;q=0.9',
+    },
+    signal: AbortSignal.timeout(6000),
+  });
+  if (!res.ok) throw new Error(`YouTube HTTP ${res.status}`);
+  const html = await res.text();
+  const match = html.match(/ytInitialData\s*=\s*({.+?});<\/script>/);
+  if (!match) throw new Error('No ytInitialData');
+  const parsed = JSON.parse(match[1]);
+  const contents = parsed?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents;
+  if (!contents || !Array.isArray(contents)) throw new Error('No contents');
+
+  const results = [];
+  for (const c of contents) {
+    const v = c.videoRenderer;
+    if (v && v.videoId) {
+      results.push({
+        videoId: v.videoId,
+        title: v.title?.runs?.map(r => r.text).join('') || '',
+        author: v.ownerText?.runs?.[0]?.text || '',
+        thumbnail: `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+        duration: v.lengthText?.simpleText || '',
+        views: v.viewCountText?.simpleText || '',
+        url: `https://www.youtube.com/watch?v=${v.videoId}`,
+      });
+    }
+  }
+  return results;
+}
+
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS_HEADERS, body: '' };
@@ -62,6 +96,18 @@ export const handler = async (event) => {
         data = await meganGet('/download/hd', { url });
         break;
       case 'yt-search':
+        try {
+          const directResults = await searchYouTubeDirect(query);
+          if (directResults && directResults.length > 0) {
+            data = {
+              status: { success: true },
+              data: { results: directResults },
+            };
+            break;
+          }
+        } catch (e) {
+          console.warn('[megan-proxy] Direct YT search failed, fallback to Megan:', e.message);
+        }
         data = await meganGet('/api/search/youtube', { q: query });
         break;
       case 'yt-info':

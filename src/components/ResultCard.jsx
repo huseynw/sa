@@ -230,38 +230,37 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
         const safeName = `${getBaseName()}.${dlExt}`;
 
-        /* CDN və ya birbaşa download linkləri (videolar üçün) */
-        const isDirectCdn = (dlUrl.includes('googlevideo.com') || dlUrl.includes('123tokyo')
-          || dlUrl.includes('tiktokcdn') || dlUrl.includes('tikcdn.io')
-          || dlUrl.includes('fbcdn') || dlUrl.includes('scontent')
-          || dlUrl.includes('rapidcdn') || dlUrl.includes('tikcdn')) && !imageMode && dlExt !== 'jpg';
+        // Videolar və MP3-lər brauzerdə önizləmə kimi açılmasın deyə proxy vasitəsilə birbaşa cihazın yaddaşına yüklənir
+        const needsProxy = !imageMode && (
+          platform === 'youtube'
+          || (platform === 'tiktok' && (audioOnly || dlExt === 'mp3' || dlUrl.includes('tiktokcdn') || dlUrl.includes('tikwm') || dlUrl.includes('tikcdn')))
+          || dlUrl.includes('googlevideo.com')
+          || dlUrl.includes('tiktokcdn')
+          || dlUrl.includes('tikcdn.io')
+          || dlUrl.includes('tikcdn')
+          || dlUrl.includes('fbcdn')
+          || dlUrl.includes('scontent')
+          || dlUrl.includes('123tokyo')
+          || dlUrl.includes('rapidcdn')
+        );
 
-        if (isDirectCdn) {
-          /* CDN linklərində birbaşa <a> download */
-          setProgressData({ percent: 100, speed: 'Yüklənir...' });
+        const finalUrl = needsProxy
+          ? `/.netlify/functions/proxy-youtube?url=${encodeURIComponent(dlUrl)}&filename=${encodeURIComponent(safeName)}&audio=${audioOnly || dlExt === 'mp3'}`
+          : dlUrl;
+
+        /* XHR download (faylı birbaşa Blob kimi yükləyir, önizləmə səhifəsinə atmır) */
+        try {
+          await downloadFile(finalUrl, safeName, (prog) => setProgressData(prog));
+        } catch (downloadErr) {
+          console.warn('XHR download failed, falling back to direct link:', downloadErr);
           const a = document.createElement('a');
-          a.href = dlUrl;
+          a.href = finalUrl;
           a.download = safeName;
-          a.target = '_blank';
-          a.rel = 'noreferrer';
-          a.referrerPolicy = 'no-referrer';
           document.body.appendChild(a);
           a.click();
-          document.body.removeChild(a);
-        } else {
-          /* XHR download (progress tracking ilə) */
-          try {
-            await downloadFile(dlUrl, safeName, (prog) => setProgressData(prog));
-          } catch (downloadErr) {
-            console.warn('XHR download failed, falling back to direct link:', downloadErr);
-            const a = document.createElement('a');
-            a.href = dlUrl.includes('#') ? dlUrl : `${dlUrl}#${safeName}`;
-            a.download = safeName;
-            a.target = '_blank';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          }
+          setTimeout(() => {
+            if (document.body.contains(a)) document.body.removeChild(a);
+          }, 2000);
         }
       }
     } catch (err) {

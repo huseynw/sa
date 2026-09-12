@@ -152,6 +152,7 @@ function App() {
   const [urlErrors, setUrlErrors] = useState({});
 
   /* ── YouTube search state ── */
+  const [ytMode, setYtMode] = useState('link'); // 'link' | 'search'
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -193,12 +194,15 @@ function App() {
       const text = await navigator.clipboard.readText();
       const cleaned = pid === 'instagram' ? cleanInstagramUrl(text) : text;
       setUrl(cleaned);
+      if (pid === 'youtube') setYtMode('link');
       if (cleaned.trim() && !isValidUrlForPlatform(cleaned, pid)) {
         setUrlError(t('error_invalid_url_platform', { platform: activePlatform.label }));
       } else {
         setUrlError('');
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Clipboard read failed:', err);
+    }
   };
 
   /* ── YouTube search handler ── */
@@ -221,7 +225,7 @@ function App() {
       const data = await res.json();
 
       if (data.status?.success && data.data?.results) {
-        setSearchResults(data.data.results.slice(0, 5));
+        setSearchResults(data.data.results.slice(0, 8));
       } else {
         setSearchResults([]);
       }
@@ -236,6 +240,7 @@ function App() {
   const handleSelectSearchResult = (item) => {
     const fullUrl = item.url || `https://youtube.com/watch?v=${item.videoId}`;
     setUrl(fullUrl);
+    setYtMode('link');
     setSearchResults([]);
     setSearchQuery('');
     setSearchSearched(false);
@@ -642,31 +647,37 @@ function App() {
                 {/* Mode tabs */}
                 <div style={{ display: 'flex', gap: '0', marginBottom: '14px' }}>
                   <button
+                    type="button"
                     className="btn btn-ghost"
                     style={{
                       flex: 1, borderRadius: '12px 0 0 12px', padding: '10px',
-                      background: !searchSearched && !url ? 'var(--surface2)' : 'transparent',
+                      background: ytMode === 'link' ? 'var(--surface2)' : 'transparent',
                       fontWeight: 600, fontSize: '0.85rem',
+                      color: ytMode === 'link' ? 'var(--text)' : 'var(--text3)',
+                      border: ytMode === 'link' ? '1px solid var(--border)' : 'none',
                     }}
-                    onClick={() => { setSearchResults([]); setSearchSearched(false); setSearchQuery(''); setUrl(''); setResult(null); }}
+                    onClick={() => { setYtMode('link'); setSearchResults([]); setSearchSearched(false); setResult(null); }}
                   >
-                    <i className="fa-solid fa-magnifying-glass" /> {t('yt_mode_search')}
+                    <i className="fa-solid fa-link" /> {t('yt_mode_link')}
                   </button>
                   <button
+                    type="button"
                     className="btn btn-ghost"
                     style={{
                       flex: 1, borderRadius: '0 12px 12px 0', padding: '10px',
-                      background: url ? 'var(--surface2)' : 'transparent',
+                      background: ytMode === 'search' ? 'var(--surface2)' : 'transparent',
                       fontWeight: 600, fontSize: '0.85rem',
+                      color: ytMode === 'search' ? 'var(--text)' : 'var(--text3)',
+                      border: ytMode === 'search' ? '1px solid var(--border)' : 'none',
                     }}
-                    onClick={() => { setSearchResults([]); setSearchSearched(false); setSearchQuery(''); setResult(null); }}
+                    onClick={() => { setYtMode('search'); setSearchResults([]); setSearchSearched(false); setResult(null); }}
                   >
-                    <i className="fa-solid fa-link" /> {t('yt_mode_link')}
+                    <i className="fa-solid fa-magnifying-glass" /> {t('yt_mode_search')}
                   </button>
                 </div>
 
                 {/* Search mode */}
-                {!url && (
+                {ytMode === 'search' && (
                   <form onSubmit={handleYouTubeSearch}>
                     <div className={`search-wrapper ${activePFull.cls}`}>
                       <i className="fa-solid fa-magnifying-glass" style={{ color: 'var(--text3)', marginLeft: '12px', fontSize: '0.9rem' }} />
@@ -680,6 +691,28 @@ function App() {
                         spellCheck="false"
                       />
                       <div className="search-actions">
+                        <button type="button" onClick={async () => {
+                          try {
+                            const text = await navigator.clipboard.readText();
+                            if (isValidUrlForPlatform(text, 'youtube') || text.includes('youtube.com') || text.includes('youtu.be')) {
+                              setUrl(text);
+                              setYtMode('link');
+                              if (!isValidUrlForPlatform(text, 'youtube')) {
+                                setUrlError(t('error_invalid_url_platform', { platform: activePlatform.label }));
+                              } else {
+                                setUrlError('');
+                              }
+                            } else {
+                              setSearchQuery(text);
+                            }
+                          } catch (err) {
+                            console.warn('Clipboard read failed:', err);
+                          }
+                        }}
+                          className="btn btn-ghost"
+                          style={{ padding: '8px 14px', borderRadius: '12px', fontSize: '0.85rem' }}>
+                          <i className="fa-regular fa-clipboard" /> {t('paste')}
+                        </button>
                         <button type="submit"
                           className={`btn btn-${activePFull.cls}`}
                           style={{ padding: '8px 20px', borderRadius: '12px' }}
@@ -692,7 +725,7 @@ function App() {
                 )}
 
                 {/* Link mode */}
-                {url && (
+                {ytMode === 'link' && (
                   <form onSubmit={handleSearch}>
                     <div className={`search-wrapper ${activePFull.cls} ${urlError ? 'input-error' : ''}`}>
                       <i className="fa-solid fa-link" style={{ color: 'var(--text3)', marginLeft: '12px', fontSize: '0.9rem' }} />
