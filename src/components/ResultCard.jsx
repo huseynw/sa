@@ -286,7 +286,20 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
       setProgressData({ percent: Math.round((i / selectedImgs.length) * 100), speed: 0 });
       let imgUrl = selectedImgs[i];
       const safeName = `${baseName}_${i + 1}.jpg`;
-      await downloadFile(imgUrl, safeName, () => {});
+      try {
+        await downloadFile(imgUrl, safeName, () => {});
+      } catch (err) {
+        console.warn('XHR failed, using direct download:', err);
+        const a = document.createElement('a');
+        a.href = imgUrl;
+        a.download = safeName;
+        a.target = '_blank';
+        a.rel = 'noreferrer';
+        a.referrerPolicy = 'no-referrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
     }
     setProgressData({ percent: 100, speed: 0 });
     setTimeout(() => {

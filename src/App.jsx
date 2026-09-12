@@ -423,6 +423,64 @@ function App() {
             picker: pickerItems,
           });
         } else {
+          // Megan API post yükləyə bilmədikdə (şəkil/karusel postları üçün) xüsusi ehtiyat API
+          console.log('[Instagram] Megan API postu yükləyə bilmədi, post üçün Cobalt API çağırılır...');
+          try {
+            const [cobaltData, meta] = await Promise.all([
+              fetch('/.netlify/functions/fetch-info', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: cleanUrl, quality: 'max' }),
+              }).then(r => r.json()),
+              fetch('/.netlify/functions/fetch-metadata', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: cleanUrl }),
+              }).then(r => r.json()).catch(() => null),
+            ]);
+
+            if (cobaltData && (cobaltData.status === 'picker' || cobaltData.url)) {
+              if (cobaltData.status === 'picker' && Array.isArray(cobaltData.picker)) {
+                const pickerItems = cobaltData.picker.map(item => ({
+                  url: item.url,
+                  thumb: item.thumb || item.url,
+                  type: item.type === 'photo' ? 'image' : (item.type || 'image'),
+                }));
+                setResult({
+                  status: 'picker',
+                  url: cleanUrl,
+                  downloadUrl: pickerItems[0]?.url,
+                  mediaType: 'image',
+                  previewMeta: {
+                    title: meta?.title || 'Instagram Post',
+                    image: meta?.image || pickerItems[0]?.thumb || pickerItems[0]?.url,
+                    description: meta?.description || '',
+                    isImage: true,
+                  },
+                  picker: pickerItems,
+                });
+                return;
+              } else if (cobaltData.url) {
+                const isPhoto = cobaltData.type === 'photo' || cobaltData.ext === 'jpg' || cobaltData.ext === 'png';
+                setResult({
+                  status: 'ready',
+                  url: cleanUrl,
+                  downloadUrl: cobaltData.url,
+                  mediaType: isPhoto ? 'image' : 'video',
+                  previewMeta: {
+                    title: meta?.title || 'Instagram Media',
+                    image: meta?.image || cobaltData.thumb || cobaltData.url,
+                    description: meta?.description || '',
+                    isImage: isPhoto,
+                  },
+                });
+                return;
+              }
+            }
+          } catch (fallbackErr) {
+            console.error('[Instagram] Post fallback xətası:', fallbackErr);
+          }
+
           const errMsg = data?.status?.error || data?.data?.error || data?.error || t('error_fetching');
           console.error('[Instagram] Failed:', errMsg);
           throw new Error(errMsg);
