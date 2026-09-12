@@ -284,8 +284,10 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
     const baseName = getBaseName();
     for (let i = 0; i < selectedImgs.length; i++) {
       setProgressData({ percent: Math.round((i / selectedImgs.length) * 100), speed: 0 });
-      let imgUrl = selectedImgs[i];
-      const safeName = `${baseName}_${i + 1}.jpg`;
+      let ext = 'jpg';
+      if (imgUrl.includes('.webp') || imgUrl.includes('webp')) ext = 'webp';
+      else if (imgUrl.includes('.png')) ext = 'png';
+      const safeName = `${baseName}_${i + 1}.${ext}`;
       try {
         await downloadFile(imgUrl, safeName, () => {});
       } catch (err) {
