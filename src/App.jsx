@@ -347,29 +347,40 @@ function App() {
         }
 
       } else if (pid === 'instagram') {
-        let data;
         const igUrl = url.trim();
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          console.log(`[Instagram] Attempt ${attempt}/3`);
+        const taskId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+        await fetch('/.netlify/functions-background/ig-background', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: igUrl, id: taskId }),
+        });
+
+        let data = null;
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          console.log(`[Instagram] Polling attempt ${i + 1}/30`);
           try {
-            const res = await fetch('/.netlify/functions/megan-proxy', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'instagram', url: igUrl }),
-            });
-            data = await res.json();
-            console.log(`[Instagram] Attempt ${attempt} success:`, data?.status?.success);
-            if (data.status?.success && data.data) break;
+            const pollRes = await fetch(`/.netlify/functions/ig-poll?id=${taskId}`);
+            const pollData = await pollRes.json();
+            console.log(`[Instagram] Poll status:`, pollData.status);
+
+            if (pollData.status === 'done') {
+              data = pollData.data;
+              break;
+            } else if (pollData.status === 'error') {
+              throw new Error(pollData.error || t('error_fetching'));
+            }
           } catch (e) {
-            console.error(`[Instagram] Attempt ${attempt} failed:`, e.message);
+            if (e.message && !e.message.includes('fetch')) {
+              throw e;
+            }
           }
-          if (attempt < 3) await new Promise(r => setTimeout(r, 2000));
         }
 
         if (data?.status?.success && data.data) {
           const d = data.data;
           const hasImages = d.images?.length > 0;
-          const hasMediaVideo = d.media?.some(m => m.type === 'video');
           setResult({
             status: hasImages ? 'picker' : 'ready',
             url: igUrl,
@@ -384,7 +395,7 @@ function App() {
           });
         } else {
           const errMsg = data?.status?.error || data?.data?.error || data?.error || t('error_fetching');
-          console.error('[Instagram] All attempts failed:', errMsg);
+          console.error('[Instagram] Failed:', errMsg);
           throw new Error(errMsg);
         }
 
