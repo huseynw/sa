@@ -13,16 +13,30 @@ async function meganGet(path, params = {}) {
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   }
-  const res = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(8000),
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      'Referer': 'https://apis.megan.qzz.io/',
-      'Accept': 'application/json',
-    },
-  });
-  if (!res.ok) throw new Error(`Megan API HTTP ${res.status}`);
-  return res.json();
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+  let lastErr;
+  for (let i = 0; i < 2; i++) {
+    try {
+      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(7000), headers });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data?.status?.success) return data;
+      if (i === 0) {
+        console.error('[megan-proxy] success=false, retrying...');
+        await new Promise(r => setTimeout(r, 500));
+        continue;
+      }
+      return data;
+    } catch (err) {
+      lastErr = err;
+      if (i === 0) await new Promise(r => setTimeout(r, 500));
+    }
+  }
+  throw lastErr;
 }
 
 export const handler = async (event) => {
