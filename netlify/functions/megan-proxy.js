@@ -7,30 +7,28 @@ const CORS_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-async function meganGet(path, params = {}, retries = 2) {
+async function meganGet(path, params = {}) {
   const url = new URL(`${MEGAN_BASE}${path}`);
   url.searchParams.set('apikey', API_KEY);
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
   }
   let lastError;
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(30000) });
+      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(7000) });
       if (!res.ok) throw new Error(`Megan API HTTP ${res.status}`);
       const data = await res.json();
-      if (data?.status?.success === false && attempt < retries) {
-        console.error(`[megan-proxy] API returned success=false (attempt ${attempt + 1}/${retries + 1}):`, data?.status?.error || 'unknown');
-        await new Promise(r => setTimeout(r, 1500));
+      if (data?.status?.success === false && attempt < 2) {
+        console.error(`[megan-proxy] success=false (attempt ${attempt + 1}/3):`, data?.status?.error || 'empty response');
+        await new Promise(r => setTimeout(r, 800));
         continue;
       }
       return data;
     } catch (err) {
       lastError = err;
-      if (attempt < retries) {
-        console.error(`[megan-proxy] Retry ${attempt + 1}/${retries} for ${path}:`, err.message);
-        await new Promise(r => setTimeout(r, 1500));
-      }
+      console.error(`[megan-proxy] attempt ${attempt + 1}/3 failed for ${path}:`, err.message);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 800));
     }
   }
   throw lastError;
