@@ -64,7 +64,29 @@ export const handler = async (event) => {
         data = await meganGet('/api/download/tiktok', { url });
         break;
       case 'tiktok-audio':
-        data = await meganGet('/api/download/tiktok/audio', { url });
+        try {
+          const tikwmRes = await fetch('https://www.tikwm.com/api/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `url=${encodeURIComponent(url)}&hd=1`,
+            signal: AbortSignal.timeout(8000),
+          });
+          const tikwmData = await tikwmRes.json();
+          if (tikwmData?.data?.music) {
+            data = {
+              status: { success: true },
+              data: {
+                music: tikwmData.data.music,
+                title: tikwmData.data.title || '',
+              },
+            };
+          } else {
+            throw new Error('TikWM: music not found');
+          }
+        } catch (e) {
+          console.error('[megan-proxy] TikWM fallback failed:', e.message);
+          data = await meganGet('/api/download/tiktok', { url });
+        }
         break;
       case 'tiktok-info':
         data = await meganGet('/api/download/tiktok/info', { url });
