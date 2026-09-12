@@ -106,10 +106,11 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
           const d = data.data;
           if (audioOnly) {
-            dlUrl = d.download || d.url || d.music;
+            dlUrl = d.music || d.audioUrl || d.download || d.url;
             dlExt = 'mp3';
           } else {
-            dlUrl = d.download || d.url || d.hdplay || d.play;
+            /* Megan API TikTok: videoUrlNoWatermark > videoUrl > download */
+            dlUrl = d.videoUrlNoWatermark || d.videoUrl || d.download || d.url || d.hdplay || d.play;
             dlExt = 'mp4';
           }
 

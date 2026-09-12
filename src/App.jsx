@@ -312,21 +312,23 @@ function App() {
         const data = await fetch('/.netlify/functions/megan-proxy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'tiktok-info', url: url.trim() }),
+          body: JSON.stringify({ action: 'tiktok', url: url.trim() }),
         }).then(r => r.json());
 
         if (data.status?.success && data.data) {
+          const d = data.data;
           setResult({
             status: 'ready',
             url: url.trim(),
             previewMeta: {
-              title: data.data.title || data.data.author?.nickname || 'TikTok Video',
-              image: data.data.cover || data.data.author?.avatar || null,
-              description: data.data.author?.nickname || '',
+              title: d.title || 'TikTok Video',
+              image: d.cover || d.author?.avatar || null,
+              description: d.author?.nickname || '',
             },
           });
         } else {
-          setResult({ status: 'ready', url: url.trim(), previewMeta: { title: 'TikTok Video', image: null, description: '' } });
+          const errMsg = data.status?.error || data.data?.error || data.error || t('error_fetching');
+          throw new Error(errMsg);
         }
 
       } else if (pid === 'instagram') {
@@ -337,18 +339,20 @@ function App() {
         }).then(r => r.json());
 
         if (data.status?.success && data.data) {
+          const d = data.data;
           setResult({
-            status: data.data.images?.length > 0 ? 'picker' : 'ready',
+            status: d.images?.length > 0 ? 'picker' : 'ready',
             url: url.trim(),
             previewMeta: {
-              title: data.data.title || 'Instagram Post',
-              image: data.data.thumbnail || data.data.images?.[0] || null,
+              title: d.title || 'Instagram Post',
+              image: d.thumbnail || d.images?.[0] || null,
               description: '',
             },
-            picker: data.data.images?.map(img => ({ url: img })) || [],
+            picker: d.images?.map(img => ({ url: img })) || [],
           });
         } else {
-          setResult({ status: 'ready', url: url.trim(), previewMeta: { title: 'Instagram Post', image: null, description: '' } });
+          const errMsg = data.status?.error || data.data?.error || data.error || t('error_fetching');
+          throw new Error(errMsg);
         }
 
       } else if (pid === 'facebook') {
@@ -359,17 +363,19 @@ function App() {
         }).then(r => r.json());
 
         if (data.status?.success && data.data) {
+          const d = data.data;
           setResult({
             status: 'ready',
             url: url.trim(),
             previewMeta: {
-              title: data.data.title || 'Facebook Video',
-              image: data.data.thumbnail || null,
+              title: d.title || 'Facebook Video',
+              image: d.thumbnail || null,
               description: '',
             },
           });
         } else {
-          setResult({ status: 'ready', url: url.trim(), previewMeta: { title: 'Facebook Video', image: null, description: '' } });
+          const errMsg = data.status?.error || data.data?.error || data.error || t('error_fetching');
+          throw new Error(errMsg);
         }
 
       } else if (pid === 'pinterest') {
@@ -390,7 +396,7 @@ function App() {
         if (data.status === 'error') alert(data.text || t('error_fetching'));
         else setResult({ ...data, previewMeta: meta });
       }
-    } catch { alert(t('error_fetching')); }
+    } catch (err) { alert(err.message || t('error_fetching')); }
     finally { setLoad(false); }
   };
 
