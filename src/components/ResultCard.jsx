@@ -94,19 +94,28 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
 
           const action = audioOnly ? 'tiktok-audio' : 'tiktok';
-          console.log('[TikTok DL] action:', action, 'url:', url);
-          const res = await fetch('/.netlify/functions/megan-proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, url }),
-          });
-          console.log('[TikTok DL] response status:', res.status);
-          const data = await res.json();
-          console.log('[TikTok DL] response:', JSON.stringify(data).substring(0, 500));
+          const MAX_DL = 5;
+          let data;
+          for (let i = 1; i <= MAX_DL; i++) {
+            console.log(`[TikTok DL] attempt ${i}/${MAX_DL}`);
+            try {
+              const res = await fetch('/.netlify/functions/megan-proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, url }),
+              });
+              data = await res.json();
+              console.log(`[TikTok DL] attempt ${i} success:`, data?.status?.success);
+              if (data.status?.success) break;
+            } catch (e) {
+              console.error(`[TikTok DL] attempt ${i} failed:`, e.message);
+            }
+            if (i < MAX_DL) await new Promise(r => setTimeout(r, 1500));
+          }
 
-          if (!data.status?.success) {
-            console.error('[TikTok DL] API error:', data);
-            throw new Error(data.data?.error || data.error || t('error_fetching'));
+          if (!data?.status?.success) {
+            console.error('[TikTok DL] All attempts failed:', data);
+            throw new Error(data?.data?.error || data?.error || t('error_fetching'));
           }
 
           const d = data.data;

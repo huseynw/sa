@@ -311,8 +311,9 @@ function App() {
       } else if (pid === 'tiktok') {
         let data;
         const tiktokUrl = url.trim();
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          console.log(`[TikTok] Attempt ${attempt}/3`);
+        const MAX_ATTEMPTS = 5;
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          console.log(`[TikTok] Attempt ${attempt}/${MAX_ATTEMPTS}`);
           try {
             const res = await fetch('/.netlify/functions/megan-proxy', {
               method: 'POST',
@@ -325,7 +326,7 @@ function App() {
           } catch (e) {
             console.error(`[TikTok] Attempt ${attempt} failed:`, e.message);
           }
-          if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
+          if (attempt < MAX_ATTEMPTS) await new Promise(r => setTimeout(r, 1500));
         }
 
         if (data?.status?.success && data.data) {
