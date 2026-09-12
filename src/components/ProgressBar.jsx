@@ -6,6 +6,8 @@ const ProgressBar = ({ progress, speed }) => {
   const { t } = useTranslation();
   if (progress === null) return null;
 
+  const isNumeric = typeof speed === 'number' || (typeof speed === 'string' && speed.trim() !== '' && !isNaN(Number(speed)));
+
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
@@ -21,7 +23,7 @@ const ProgressBar = ({ progress, speed }) => {
         <div className="progress-fill" style={{ width: `${progress}%` }} />
       </div>
       <div style={{ textAlign: 'right', marginTop: '6px', fontSize: '0.78rem', color: 'var(--text3)' }}>
-        {t('speed')} {speed} MB/s
+        {isNumeric ? `${t('speed')} ${speed} MB/s` : (speed || '')}
       </div>
     </motion.div>
   );

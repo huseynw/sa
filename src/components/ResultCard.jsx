@@ -82,7 +82,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
       if (!dlUrl) {
         if (platform === 'youtube') {
           /* ── YouTube: Megan API ── */
-          setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
+          setProgressData({ percent: 10, speed: 'Yüklənir...' });
 
           const action = audioOnly ? 'yt-mp3' : 'yt-mp4';
           const data = await fetch('/.netlify/functions/megan-proxy', {
@@ -102,7 +102,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
         } else if (platform === 'tiktok') {
           /* ── TikTok: Megan API ── */
-          setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
+          setProgressData({ percent: 10, speed: 'Yüklənir...' });
 
           const action = audioOnly ? 'tiktok-audio' : 'tiktok';
           const MAX_DL = 5;
@@ -177,7 +177,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
         } else if (platform === 'facebook') {
           /* ── Facebook: Megan API ── */
-          setProgressData({ percent: 10, speed: 'Megan API-yə sorğu göndərilir...' });
+          setProgressData({ percent: 10, speed: 'Yüklənir...' });
 
           const data = await fetch('/.netlify/functions/megan-proxy', {
             method: 'POST',
@@ -197,7 +197,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
         } else if (platform === 'pinterest') {
           /* ── Pinterest: Cobalt (dəyişməz) ── */
-          setProgressData({ percent: 10, speed: 'Cobalt API-yə sorğu göndərilir...' });
+          setProgressData({ percent: 10, speed: 'Yüklənir...' });
 
           const data = await fetch('/.netlify/functions/fetch-info', {
             method: 'POST',

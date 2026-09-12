@@ -26,7 +26,7 @@ const i18nConfig = {
         "yt_mode_search": "Search",
         "yt_mode_link": "Paste Link",
         "yt_no_results": "No results found. Try a different search.",
-        "yt_video_info": "Download video in 720p quality via Megan API",
+        "yt_video_info": "Download video in 720p quality",
         "views": "views",
         "error_invalid_url_platform": "This is not a {{platform}} link. Please paste a valid {{platform}} URL.",
 
@@ -117,7 +117,7 @@ const i18nConfig = {
         "yt_mode_search": "Axtar",
         "yt_mode_link": "Link Yapışdır",
         "yt_no_results": "Nəticə tapılmadı. Fərqli axtarış sınayın.",
-        "yt_video_info": "Megan API ilə 720p keyfiyyətində video yüklə",
+        "yt_video_info": "720p keyfiyyətində video yüklə",
         "views": "baxış",
         "error_invalid_url_platform": "Bu {{platform}} linki deyil. Düzgün {{platform}} URL-i yapışdırın.",
 
@@ -208,7 +208,7 @@ const i18nConfig = {
         "yt_mode_search": "Ara",
         "yt_mode_link": "Link Yapıştır",
         "yt_no_results": "Sonuç bulunamadı. Farklı bir arama deneyin.",
-        "yt_video_info": "Megan API ile 720p kalitesinde video indir",
+        "yt_video_info": "720p kalitesinde video indir",
         "views": "görüntülenme",
         "error_invalid_url_platform": "Bu bir {{platform}} linki değil. Lütfen geçerli bir {{platform}} URL'si yapıştırın.",
 
@@ -299,7 +299,7 @@ const i18nConfig = {
         "yt_mode_search": "Поиск",
         "yt_mode_link": "Вставить ссылку",
         "yt_no_results": "Ничего не найдено. Попробуйте другой запрос.",
-        "yt_video_info": "Скачать видео в качестве 720p через Megan API",
+        "yt_video_info": "Скачать видео в качестве 720p",
         "views": "просмотров",
         "error_invalid_url_platform": "Это не ссылка {{platform}}. Пожалуйста, вставьте правильный URL {{platform}}.",
 
