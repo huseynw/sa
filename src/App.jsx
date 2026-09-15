@@ -38,19 +38,14 @@ function OdometerTitle() {
     <h1 className="hero-title">
       <span className="hero-title-brand">HUSEVN</span>
       <span className="hero-title-roller">
-        <AnimatePresence mode="popLayout" initial={false}>
+        <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={ROLLING_WORDS[index]}
             className="hero-roller-word"
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: '0%', opacity: 1 }}
-            exit={{ y: '-100%', opacity: 0 }}
-            transition={{
-              type: 'spring',
-              stiffness: 280,
-              damping: 24,
-              mass: 0.8,
-            }}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -20, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
           >
             {ROLLING_WORDS[index]}
           </motion.span>
