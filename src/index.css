@@ -154,7 +154,6 @@ body::before {
   pointer-events: none;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  transition: opacity 0.5s ease;
 }
 
 /* Liquid Ambient Vignette & Contrast Overlay */
@@ -245,7 +244,7 @@ body::after {
   left: 50%;
   transform: translate3d(-50%, 0, 0);
   -webkit-transform: translate3d(-50%, 0, 0);
-  will-change: transform, max-width, padding;
+  will-change: transform;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   z-index: 1000;
@@ -256,7 +255,11 @@ body::after {
   background: var(--liquid-glass);
   border: 1px solid var(--liquid-hi);
   box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.28), inset 0 1px 1px 0 rgba(255, 255, 255, 0.35);
-  transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: max-width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              padding 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              top 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              width 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.38s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Scroll olanda balacalaşır, daima yuxarıda təqib edir */

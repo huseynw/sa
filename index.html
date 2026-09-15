@@ -3,10 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Download high-quality videos, audio, and images from YouTube, TikTok, Instagram, Pinterest, and Facebook." />
     <meta name="google-site-verification" content="_hzHQ5Rt4h4WBPUyitoyd-8Vx1ru9rjA6bTYXM8CHA8" />
     <title>HUSEVN DOWNLOADER</title>
+    <!-- Preload critical background image so iOS Safari fetches it immediately -->
+    <link rel="preload" as="image" href="/bg.jpg" fetchpriority="high" />
+    <!-- Critical inline CSS: show background color + image before JS loads -->
+    <style>
+      html, body { margin: 0; padding: 0; background-color: #060814; }
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: url('/bg.jpg') no-repeat center top / cover;
+        z-index: 0;
+        opacity: 0.85;
+        pointer-events: none;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
