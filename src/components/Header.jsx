@@ -4,15 +4,24 @@ import { useTranslation } from 'react-i18next';
 const Header = () => {
   const { i18n } = useTranslation();
   const [theme, setTheme] = useState('dark');
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    const onScroll = () => {
+      setScrolled(window.scrollY > 25);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
   return (
-    <header className="header">
+    <header className={`header ${scrolled ? 'scrolled' : ''}`}>
       <div className="logo">
         <i className="fa-solid fa-bolt-lightning" />
         <span>HUSEVN</span>

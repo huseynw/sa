@@ -148,6 +148,7 @@ function App() {
   }, []);
 
   const [activePlatform, setActivePlatform] = useState(platforms[0]);
+  const [hoveredTab, setHoveredTab] = useState(null);
   const [urls,     setUrls]     = useState({});
   const [results,  setResults]  = useState({});
   const [loadings, setLoadings] = useState({});
@@ -623,19 +624,37 @@ function App() {
 
         {/* Platform tabs */}
         <div className="platform-tabs">
-          {platforms.map(p => (
-            <motion.button
-              key={p.id}
-              className={`ptab ${p.cls} ${pid === p.id ? 'active-' + p.cls : ''}`}
-              onClick={() => selectPlatform(p)}
-              whileHover={{ y: -3 }}
-              whileTap={{ scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            >
-              <i className={p.icon} />
-              {p.label}
-            </motion.button>
-          ))}
+          {platforms.map(p => {
+            const isExpanded = pid === p.id || hoveredTab === p.id;
+            return (
+              <motion.button
+                key={p.id}
+                className={`ptab ${p.cls} ${pid === p.id ? 'active-' + p.cls : ''} ${isExpanded ? 'is-expanded' : ''}`}
+                onClick={() => selectPlatform(p)}
+                onMouseEnter={() => setHoveredTab(p.id)}
+                onMouseLeave={() => setHoveredTab(null)}
+                whileHover={{ y: -3 }}
+                whileTap={{ scale: 0.94 }}
+                layout
+                transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+              >
+                <i className={p.icon} />
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.span
+                      className="ptab-label"
+                      initial={{ width: 0, opacity: 0, scale: 0.85 }}
+                      animate={{ width: 'auto', opacity: 1, scale: 1 }}
+                      exit={{ width: 0, opacity: 0, scale: 0.85 }}
+                      transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                    >
+                      {p.label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            );
+          })}
         </div>
 
         {/* Platform section */}
