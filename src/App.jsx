@@ -631,19 +631,19 @@ function App() {
                 onClick={() => selectPlatform(p)}
                 onMouseEnter={() => setHoveredTab(p.id)}
                 onMouseLeave={() => setHoveredTab(null)}
-                whileHover={{ y: -3 }}
-                whileTap={{ scale: 0.94 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.15 }}
               >
                 <i className={p.icon} />
                 <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.span
                       className="ptab-label"
-                      initial={{ width: 0, opacity: 0, scale: 0.85 }}
-                      animate={{ width: 'auto', opacity: 1, scale: 1 }}
-                      exit={{ width: 0, opacity: 0, scale: 0.85 }}
-                      transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
                     >
                       {p.label}
                     </motion.span>
@@ -655,14 +655,14 @@ function App() {
         </div>
 
         {/* Platform section */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={pid}
             className="platform-section"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
           >
             {/* Header card */}
             <div className={`platform-section-header ${activePFull.cls}`}>
