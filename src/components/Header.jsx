@@ -11,9 +11,23 @@ const Header = () => {
   }, [theme]);
 
   useEffect(() => {
+    let ticking = false;
+    let isScrolled = false;
+
     const onScroll = () => {
-      setScrolled(window.scrollY > 25);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const next = window.scrollY > 25;
+          if (next !== isScrolled) {
+            isScrolled = next;
+            setScrolled(next);
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
+
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
