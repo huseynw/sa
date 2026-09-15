@@ -16,44 +16,46 @@ const trackStat = (action, platform) => {
   }).catch(() => {});
 };
 
-/* ── Looping Typewriter Title ── */
-const TYPEWRITER_PHRASES = [
-  'HUSEVN DOWNLOADER',
-  'HUSEVN YÜKLƏYİCİ',
-  'HUSEVN İNDİRİCİ',
-  'HUSEVN ЗАГРУЗЧИК',
+/* ── Rolling Odometer Title ── */
+const ROLLING_WORDS = [
+  'DOWNLOADER',
+  'YÜKLƏYİCİ',
+  'İNDİRİCİ',
+  'ЗАГРУЗЧИК',
 ];
 
-function TypewriterTitle() {
-  const [phraseIdx, setPhraseIdx] = useState(0);
-  const [displayed, setDisplayed] = useState('');
-  const [deleting, setDeleting] = useState(false);
-  const timeoutRef = useRef(null);
+function OdometerTitle() {
+  const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const phrase = TYPEWRITER_PHRASES[phraseIdx];
-
-    if (!deleting && displayed.length < phrase.length) {
-      timeoutRef.current = setTimeout(() => {
-        setDisplayed(phrase.slice(0, displayed.length + 1));
-      }, 80);
-    } else if (!deleting && displayed.length === phrase.length) {
-      timeoutRef.current = setTimeout(() => setDeleting(true), 2000);
-    } else if (deleting && displayed.length > 0) {
-      timeoutRef.current = setTimeout(() => {
-        setDisplayed(phrase.slice(0, displayed.length - 1));
-      }, 40);
-    } else if (deleting && displayed.length === 0) {
-      setDeleting(false);
-      setPhraseIdx(i => (i + 1) % TYPEWRITER_PHRASES.length);
-    }
-
-    return () => clearTimeout(timeoutRef.current);
-  }, [displayed, deleting, phraseIdx]);
+    const interval = setInterval(() => {
+      setIndex(i => (i + 1) % ROLLING_WORDS.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <h1 className="hero-title">
-      {displayed}<span className="typewriter-cursor" />
+      <span className="hero-title-brand">HUSEVN</span>
+      <span className="hero-title-roller">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            key={ROLLING_WORDS[index]}
+            className="hero-roller-word"
+            initial={{ y: '100%', opacity: 0, filter: 'blur(8px)' }}
+            animate={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
+            exit={{ y: '-100%', opacity: 0, filter: 'blur(8px)' }}
+            transition={{
+              type: 'spring',
+              stiffness: 280,
+              damping: 24,
+              mass: 0.8,
+            }}
+          >
+            {ROLLING_WORDS[index]}
+          </motion.span>
+        </AnimatePresence>
+      </span>
     </h1>
   );
 }
@@ -615,7 +617,7 @@ function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <TypewriterTitle />
+          <OdometerTitle />
           <p className="hero-sub">{t('hero_subtitle')}</p>
         </motion.div>
 
@@ -666,31 +668,17 @@ function App() {
             {isYouTube ? (
               <div className={`platform-search-area ${activePFull.cls}`}>
                 {/* Mode tabs */}
-                <div style={{ display: 'flex', gap: '0', marginBottom: '14px' }}>
+                <div className="yt-mode-selector">
                   <button
                     type="button"
-                    className="btn btn-ghost"
-                    style={{
-                      flex: 1, borderRadius: '12px 0 0 12px', padding: '10px',
-                      background: ytMode === 'link' ? 'var(--surface2)' : 'transparent',
-                      fontWeight: 600, fontSize: '0.85rem',
-                      color: ytMode === 'link' ? 'var(--text)' : 'var(--text3)',
-                      border: ytMode === 'link' ? '1px solid var(--border)' : 'none',
-                    }}
+                    className={`yt-mode-btn ${ytMode === 'link' ? 'active' : ''}`}
                     onClick={() => { setYtMode('link'); setSearchResults([]); setSearchSearched(false); setResult(null); }}
                   >
                     <i className="fa-solid fa-link" /> {t('yt_mode_link')}
                   </button>
                   <button
                     type="button"
-                    className="btn btn-ghost"
-                    style={{
-                      flex: 1, borderRadius: '0 12px 12px 0', padding: '10px',
-                      background: ytMode === 'search' ? 'var(--surface2)' : 'transparent',
-                      fontWeight: 600, fontSize: '0.85rem',
-                      color: ytMode === 'search' ? 'var(--text)' : 'var(--text3)',
-                      border: ytMode === 'search' ? '1px solid var(--border)' : 'none',
-                    }}
+                    className={`yt-mode-btn ${ytMode === 'search' ? 'active' : ''}`}
                     onClick={() => { setYtMode('search'); setSearchResults([]); setSearchSearched(false); setResult(null); }}
                   >
                     <i className="fa-solid fa-magnifying-glass" /> {t('yt_mode_search')}
@@ -870,13 +858,14 @@ function App() {
 
             {/* Empty state */}
             {!result && !loading && !searchLoading && searchResults.length === 0 && (
-              <div style={{
-                padding: '30px 28px', background: 'var(--surface)',
-                border: '1px solid var(--border)', borderRadius: '0 0 24px 24px',
-                textAlign: 'center', color: 'var(--text3)', fontSize: '0.9rem',
-              }}>
-                <i className="fa-solid fa-arrow-up" style={{ display: 'block', fontSize: '1.5rem', marginBottom: '8px', opacity: 0.4 }} />
-                {isYouTube ? t('yt_empty_state') : t('empty_state')}
+              <div className={`platform-empty-box ${activePFull.cls}`}>
+                <div className="empty-radar-glow">
+                  <div className="empty-radar-ping" />
+                  <i className="fa-solid fa-arrow-up-long" />
+                </div>
+                <div className="empty-title">
+                  {isYouTube ? t('yt_empty_state') : t('empty_state')}
+                </div>
               </div>
             )}
           </motion.div>
