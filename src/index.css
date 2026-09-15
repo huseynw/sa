@@ -3,13 +3,12 @@
    Custom Artwork Wallpaper · Apple SF Pro · Refractive Glassmorphism
 ═════════════════════════════════════════════════════════════════ */
 
-/* ── Apple SF Pro Display Typography (Official Web Font) ── */
-@import url('https://fonts.cdnfonts.com/css/sf-pro-display');
+/* ── Native Apple SF Pro & Modern System Typography ── */
 @import '@fortawesome/fontawesome-free/css/all.min.css';
 
 :root {
-  /* ── Apple SF Pro Font Stack ── */
-  --font: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', system-ui, sans-serif;
+  /* ── Apple SF Pro Font Stack (Native on iOS/macOS, zero render blocking) ── */
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', system-ui, sans-serif;
 
   /* ── Liquid Glass Color Palette (Ultra-Transparent Crystal Glass - No Blur) ── */
   --bg:           #060814;
@@ -188,14 +187,15 @@ body::after {
   background: var(--platform-color);
 }
 
-/* ── Floating Aurora Orbs (Subtle complementary lighting) ── */
+/* ── Floating Aurora Orbs (Hardware-accelerated native radial glow, 0% GPU filter cost) ── */
 .orb {
   position: fixed;
   border-radius: 50%;
-  filter: blur(140px);
   pointer-events: none;
   z-index: 0;
-  will-change: transform, opacity;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
 }
 
 .orb-1 {
@@ -203,8 +203,8 @@ body::after {
   height: 650px;
   top: -180px;
   left: -120px;
-  background: radial-gradient(circle, var(--platform-color) 0%, transparent 70%);
-  opacity: 0.28;
+  background: radial-gradient(circle at 50% 50%, var(--platform-color) 0%, var(--platform-glow) 30%, transparent 70%);
+  opacity: 0.42;
   animation: floatOrb1 18s ease-in-out infinite alternate;
 }
 
@@ -213,8 +213,8 @@ body::after {
   height: 580px;
   bottom: -120px;
   right: -80px;
-  background: radial-gradient(circle, var(--accent2) 0%, transparent 70%);
-  opacity: 0.22;
+  background: radial-gradient(circle at 50% 50%, var(--accent2) 0%, var(--accent-glow) 30%, transparent 70%);
+  opacity: 0.35;
   animation: floatOrb2 22s ease-in-out infinite alternate;
 }
 

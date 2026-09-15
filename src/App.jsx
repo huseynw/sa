@@ -42,9 +42,9 @@ function OdometerTitle() {
           <motion.span
             key={ROLLING_WORDS[index]}
             className="hero-roller-word"
-            initial={{ y: '100%', opacity: 0, filter: 'blur(8px)' }}
-            animate={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
-            exit={{ y: '-100%', opacity: 0, filter: 'blur(8px)' }}
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: '0%', opacity: 1 }}
+            exit={{ y: '-100%', opacity: 0 }}
             transition={{
               type: 'spring',
               stiffness: 280,
@@ -635,7 +635,6 @@ function App() {
                 onMouseLeave={() => setHoveredTab(null)}
                 whileHover={{ y: -3 }}
                 whileTap={{ scale: 0.94 }}
-                layout
                 transition={{ type: 'spring', stiffness: 500, damping: 32 }}
               >
                 <i className={p.icon} />
