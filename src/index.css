@@ -560,7 +560,8 @@ main {
   vertical-align: middle;
   align-items: center;
   justify-content: flex-start;
-  min-width: 7ch;
+  width: 7.8em;
+  text-align: left;
   background: transparent !important;
   border: none !important;
   outline: none !important;
@@ -576,6 +577,8 @@ main {
   box-shadow: none !important;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
   letter-spacing: -0.02em;
+  text-align: left;
+  white-space: nowrap;
   will-change: transform, opacity;
 }
 
