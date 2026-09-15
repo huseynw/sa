@@ -608,8 +608,6 @@ function App() {
   return (
     <>
       <Header />
-      <div className="orb orb-1" />
-      <div className="orb orb-2" />
 
       <main>
         <motion.div

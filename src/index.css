@@ -187,48 +187,6 @@ body::after {
   background: var(--platform-color);
 }
 
-/* ── Floating Aurora Orbs (Hardware-accelerated native radial glow, 0% GPU filter cost) ── */
-.orb {
-  position: fixed;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  will-change: transform;
-}
-
-.orb-1 {
-  width: 650px;
-  height: 650px;
-  top: -180px;
-  left: -120px;
-  background: radial-gradient(circle at 50% 50%, var(--platform-color) 0%, var(--platform-glow) 30%, transparent 70%);
-  opacity: 0.42;
-  animation: floatOrb1 18s ease-in-out infinite alternate;
-}
-
-.orb-2 {
-  width: 580px;
-  height: 580px;
-  bottom: -120px;
-  right: -80px;
-  background: radial-gradient(circle at 50% 50%, var(--accent2) 0%, var(--accent-glow) 30%, transparent 70%);
-  opacity: 0.35;
-  animation: floatOrb2 22s ease-in-out infinite alternate;
-}
-
-@keyframes floatOrb1 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(80px, 70px) scale(1.15); }
-  100% { transform: translate(-40px, 110px) scale(0.95); }
-}
-
-@keyframes floatOrb2 {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(-70px, -60px) scale(1.12); }
-  100% { transform: translate(50px, -90px) scale(0.9); }
-}
 
 /* ═════════════════════════════════════════════════════════════════
    LIQUID GLASS HEADER (FROSTED VISIONOS BAR)
