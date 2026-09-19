@@ -1,0 +1,41 @@
+[build]
+  command   = "npm run build"
+  publish   = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from   = "/api/stats"
+  to     = "/.netlify/functions/stats"
+  status = 200
+
+[[redirects]]
+  from   = "/api/lyrics"
+  to     = "/.netlify/functions/lyrics"
+  status = 200
+
+[[redirects]]
+  from   = "/api/shortcut"
+  to     = "/.netlify/functions/shortcut"
+  status = 200
+
+[[redirects]]
+  from   = "/api/proxy"
+  to     = "/.netlify/functions/proxy-youtube"
+  status = 200
+
+[[redirects]]
+  from   = "/api/geo"
+  to     = "/.netlify/functions/geo"
+  status = 200
+
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
