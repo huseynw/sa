@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
-export const DEFAULT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/45a72db4df8e4384815d72c0ddf2d969';
+export const DEFAULT_SHORTCUT_URL = 'https://www.icloud.com/shortcuts/32720f383b264a35a865e8f750a0dafc';
 
 export default function ShortcutModal({ isOpen, onClose, shortcutUrl = DEFAULT_SHORTCUT_URL }) {
   const { t } = useTranslation();
