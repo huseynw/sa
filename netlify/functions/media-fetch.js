@@ -340,35 +340,35 @@ export const handler = async (event) => {
 
       case 'tiktok': {
         try {
-          data = await meganGet('/api/download/tiktok', { url });
+          const tikwmRes = await fetch('https://www.tikwm.com/api/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `url=${encodeURIComponent(url)}&hd=1`,
+            signal: AbortSignal.timeout(6000),
+          });
+          const tikwmData = await tikwmRes.json();
+          if (tikwmData?.data) {
+            data = {
+              status: { success: true, code: 200, name: 'OK' },
+              data: {
+                title: tikwmData.data.title || '',
+                cover: tikwmData.data.cover || '',
+                videoUrl: tikwmData.data.play || '',
+                videoUrlNoWatermark: tikwmData.data.play || '',
+                music: tikwmData.data.music || '',
+                images: Array.isArray(tikwmData.data.images) ? tikwmData.data.images : [],
+              },
+            };
+          }
         } catch (e) {
-          console.warn('[megan-proxy] Megan TikTok fetch error:', e.message);
+          console.warn('[megan-proxy] TikWM TikTok fetch error:', e.message);
         }
 
-        const hasImages = Array.isArray(data?.data?.images) && data.data.images.length > 0;
-        if (!hasImages) {
+        if (!data?.data?.videoUrl && (!data?.data?.images || data.data.images.length === 0)) {
           try {
-            const tikwmRes = await fetch('https://www.tikwm.com/api/', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: `url=${encodeURIComponent(url)}&hd=1`,
-              signal: AbortSignal.timeout(6000),
-            });
-            const tikwmData = await tikwmRes.json();
-            if (tikwmData?.data) {
-              if (!data) data = { status: { success: true }, data: {} };
-              if (!data.data) data.data = {};
-              if (Array.isArray(tikwmData.data.images) && tikwmData.data.images.length > 0) {
-                data.data.images = tikwmData.data.images;
-              }
-              if (!data.data.title && tikwmData.data.title) data.data.title = tikwmData.data.title;
-              if (!data.data.cover && tikwmData.data.cover) data.data.cover = tikwmData.data.cover;
-              if (!data.data.music && tikwmData.data.music) data.data.music = tikwmData.data.music;
-              if (!data.data.videoUrl && tikwmData.data.play) data.data.videoUrl = tikwmData.data.play;
-              data.status = { success: true };
-            }
-          } catch (err) {
-            console.warn('[megan-proxy] TikWM image fallback failed:', err.message);
+            data = await meganGet('/api/download/tiktok', { url });
+          } catch (e) {
+            console.warn('[megan-proxy] Megan TikTok fallback error:', e.message);
           }
         }
         break;

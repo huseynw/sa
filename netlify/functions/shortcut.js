@@ -426,11 +426,28 @@ export const handler = async (event) => {
       let images = [];
       let title = 'TikTok Media';
 
+      let targetUrl = inputUrl;
+      if (targetUrl.includes('vm.tiktok.com') || targetUrl.includes('vt.tiktok.com') || targetUrl.includes('/t/')) {
+        try {
+          const res = await fetch(targetUrl, {
+            method: 'HEAD',
+            redirect: 'follow',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+            },
+            signal: AbortSignal.timeout(3500),
+          });
+          if (res.url && res.url !== targetUrl) {
+            targetUrl = res.url.split('?')[0];
+          }
+        } catch {}
+      }
+
       try {
         const tikwmRes = await fetch('https://www.tikwm.com/api/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `url=${encodeURIComponent(inputUrl)}&hd=1`,
+          body: `url=${encodeURIComponent(targetUrl)}&hd=1`,
           signal: AbortSignal.timeout(7000),
         });
         const tikwmData = await tikwmRes.json();
@@ -446,9 +463,9 @@ export const handler = async (event) => {
         console.warn('[Shortcut] TikTok TikWM error:', e.message);
       }
 
-      if (!videoUrl || images.length === 0) {
+      if (!videoUrl && images.length === 0) {
         try {
-          const data = await meganGet('/api/download/tiktok', { url: inputUrl }, 15000);
+          const data = await meganGet('/api/download/tiktok', { url: targetUrl }, 15000);
           if (!videoUrl) {
             videoUrl =
               data?.data?.videoNoWatermarkProxyUrl ||
