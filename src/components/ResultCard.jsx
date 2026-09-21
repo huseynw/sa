@@ -50,11 +50,51 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
   }, [result, platform]);
 
   const [muted, setMuted] = useState(false);
-
   const [selectedImgs, setSelectedImgs] = useState([]);
-
   const [downloading, setDownloading] = useState(false);
   const [progressData, setProgressData] = useState(null);
+  const [probedMeta, setProbedMeta] = useState({});
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const mediaUrl = result?.downloadUrl || result?.videoUrl || result?.proxyUrl;
+
+    if (mediaUrl) {
+      if (!result?.metadata?.size) {
+        fetch('/.netlify/functions/media-fetch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'probe-url', url: mediaUrl }),
+        })
+          .then(r => r.json())
+          .then(d => {
+            if (isMounted && d?.data?.size) {
+              setProbedMeta(prev => ({ ...prev, size: d.data.size }));
+            }
+          })
+          .catch(() => {});
+      }
+
+      if (result?.mediaType !== 'image' && !result?.previewMeta?.isImage) {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.muted = true;
+        v.playsInline = true;
+        v.src = mediaUrl;
+        v.onloadedmetadata = () => {
+          if (isMounted) {
+            setProbedMeta(prev => ({
+              ...prev,
+              resolution: (v.videoWidth && v.videoHeight) ? `${v.videoWidth}×${v.videoHeight}` : prev.resolution,
+              duration: v.duration && !isNaN(v.duration) ? Math.round(v.duration) : prev.duration,
+            }));
+          }
+        };
+      }
+    }
+
+    return () => { isMounted = false; };
+  }, [result]);
 
   if (!result) return null;
 
@@ -321,6 +361,26 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
   const previewImg = result.previewMeta?.image || thumbUrl || null;
   const previewTitle = result.previewMeta?.title || '';
 
+  const rawMeta = { ...result.metadata, ...probedMeta };
+
+  let finalBitrate = rawMeta.bitrate;
+  if (!finalBitrate && rawMeta.size && rawMeta.duration) {
+    const kbps = Math.round((rawMeta.size * 8) / rawMeta.duration / 1000);
+    if (kbps > 0) finalBitrate = `${kbps} kbps`;
+  }
+
+  let finalEngagement = rawMeta.engagement;
+  if (!finalEngagement && rawMeta.views && rawMeta.likes) {
+    const tot = (rawMeta.likes || 0) + (rawMeta.comments || 0) + (rawMeta.shares || 0) + (rawMeta.saves || 0);
+    finalEngagement = `${((tot / rawMeta.views) * 100).toFixed(2)}%`;
+  }
+
+  const enrichedMeta = {
+    ...rawMeta,
+    bitrate: finalBitrate,
+    engagement: finalEngagement,
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -345,6 +405,8 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           </div>
         </div>
       )}
+
+      <VideoMetadataPanel meta={enrichedMeta} />
 
       {progressData && (
         <div style={{ marginBottom: '16px' }}>
@@ -701,6 +763,110 @@ const YoutubeThumbnailTab = ({ videoId, title, btnCls }) => {
             ? <span className="spinner" />
             : <><i className="fa-solid fa-image" /> Thumbnail Yüklə</>}
         </button>
+      </div>
+    </div>
+  );
+};
+
+function formatNumber(num) {
+  if (num === null || num === undefined || num === '') return null;
+  if (typeof num === 'string') {
+    if (/[a-zA-Z]/.test(num)) return num;
+    const p = parseFloat(num.replace(/,/g, ''));
+    if (!isNaN(p)) num = p;
+    else return num;
+  }
+  if (typeof num !== 'number' || isNaN(num)) return null;
+  if (num >= 1e9) return (num / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+  if (num >= 1e6) return (num / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+  return num.toLocaleString();
+}
+
+function formatBytes(bytes) {
+  if (!bytes || isNaN(bytes)) return null;
+  const num = typeof bytes === 'string' ? parseInt(bytes, 10) : bytes;
+  if (!num || isNaN(num) || num <= 0) return null;
+  if (num >= 1024 * 1024 * 1024) return (num / (1024 ** 3)).toFixed(1) + ' GB';
+  if (num >= 1024 * 1024) return (num / (1024 ** 2)).toFixed(1) + ' MB';
+  if (num >= 1024) return (num / 1024).toFixed(1) + ' KB';
+  return num + ' B';
+}
+
+function formatDuration(sec) {
+  if (!sec || isNaN(sec)) return null;
+  const s = parseInt(sec, 10);
+  if (isNaN(s) || s <= 0) return null;
+  const m = Math.floor(s / 60);
+  const remS = s % 60;
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return `${h}:${remM < 10 ? '0' : ''}${remM}:${remS < 10 ? '0' : ''}${remS}`;
+  }
+  return `${m}:${remS < 10 ? '0' : ''}${remS}`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const dt = new Date(dateStr);
+    if (isNaN(dt.getTime())) return dateStr;
+    return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
+const VideoMetadataPanel = ({ meta }) => {
+  const { t } = useTranslation();
+  if (!meta) return null;
+
+  const items = [
+    { id: 'views', icon: 'fa-solid fa-eye', label: t('meta_views'), val: formatNumber(meta.views) },
+    { id: 'likes', icon: 'fa-solid fa-heart', label: t('meta_likes'), val: formatNumber(meta.likes) },
+    { id: 'comments', icon: 'fa-solid fa-comment-dots', label: t('meta_comments'), val: formatNumber(meta.comments) },
+    { id: 'shares', icon: 'fa-solid fa-share-nodes', label: t('meta_shares'), val: formatNumber(meta.shares) },
+    { id: 'saves', icon: 'fa-solid fa-bookmark', label: t('meta_saves'), val: formatNumber(meta.saves) },
+    { id: 'engagement', icon: 'fa-solid fa-chart-line', label: t('meta_engagement'), val: meta.engagement },
+    { id: 'resolution', icon: 'fa-solid fa-expand', label: t('meta_resolution'), val: meta.resolution },
+    { id: 'fps', icon: 'fa-solid fa-gauge-high', label: t('meta_fps'), val: meta.fps ? `${meta.fps} FPS` : null },
+    { id: 'bitrate', icon: 'fa-solid fa-wave-square', label: t('meta_bitrate'), val: meta.bitrate },
+    { id: 'duration', icon: 'fa-solid fa-clock', label: t('meta_duration'), val: formatDuration(meta.duration) },
+    { id: 'size', icon: 'fa-solid fa-hard-drive', label: t('meta_size'), val: formatBytes(meta.size) },
+    { id: 'uploadDate', icon: 'fa-solid fa-calendar-days', label: t('meta_upload_date'), val: formatDate(meta.uploadDate) },
+    { id: 'region', icon: 'fa-solid fa-globe', label: t('meta_region'), val: meta.region },
+  ].filter(item => item.val !== null && item.val !== undefined && item.val !== '');
+
+  if (items.length === 0 && meta.shadowban === undefined) return null;
+
+  return (
+    <div className="meta-analytics-container">
+      <div className="meta-analytics-header">
+        <div className="meta-analytics-title">
+          <i className="fa-solid fa-chart-simple" />
+          <span>{t('meta_analytics_title')}</span>
+        </div>
+        {meta.shadowban !== undefined && (
+          <div className={`meta-shadowban-badge ${meta.shadowban ? 'flagged' : 'clean'}`}>
+            <i className={`fa-solid ${meta.shadowban ? 'fa-triangle-exclamation' : 'fa-shield-halved'}`} />
+            <span>{t('meta_shadowban')}: {meta.shadowban ? t('meta_status_restricted') : t('meta_status_clean')}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="meta-analytics-grid">
+        {items.map(item => (
+          <div key={item.id} className="meta-metric-card">
+            <div className="meta-metric-icon">
+              <i className={item.icon} />
+            </div>
+            <div className="meta-metric-info">
+              <span className="meta-metric-label">{item.label}</span>
+              <span className="meta-metric-value">{item.val}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

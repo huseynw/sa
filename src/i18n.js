@@ -115,7 +115,24 @@ const i18nConfig = {
         "ios_shortcut_btn": "Shortcut",
         "ios_shortcut_title": "iPhone Shortcut",
         "ios_shortcut_desc": "Automatically captures the link from clipboard, detects the platform, and downloads MP4, MP3 or images directly to your Photos.",
-        "ios_shortcut_add_btn": "Add Shortcut to iPhone"
+        "ios_shortcut_add_btn": "Add Shortcut to iPhone",
+        "meta_upload_date": "Upload Date",
+        "meta_region": "Region",
+        "meta_shadowban": "Shadowban",
+        "meta_status_clean": "Clean",
+        "meta_status_restricted": "Restricted",
+        "meta_resolution": "Resolution",
+        "meta_fps": "FPS",
+        "meta_bitrate": "Bitrate",
+        "meta_duration": "Duration",
+        "meta_size": "File Size",
+        "meta_views": "Views",
+        "meta_likes": "Likes",
+        "meta_comments": "Comments",
+        "meta_shares": "Shares",
+        "meta_saves": "Saves",
+        "meta_engagement": "Engagement",
+        "meta_analytics_title": "Video Metadata & Analytics"
       }
     },
     AZ: {
@@ -233,7 +250,24 @@ const i18nConfig = {
         "ios_shortcut_btn": "Kəstirmə",
         "ios_shortcut_title": "iPhone Kəstirməsi",
         "ios_shortcut_desc": "Panodan linki avtomatik götürür, platformanı təyin edir və tək toxunuşla medianı (MP4, MP3 və ya şəkilləri) Qalereyanıza yükləyir.",
-        "ios_shortcut_add_btn": "Kəstirməni Əlavə Et"
+        "ios_shortcut_add_btn": "Kəstirməni Əlavə Et",
+        "meta_upload_date": "Yüklənmə Tarixi",
+        "meta_region": "Bölgə",
+        "meta_shadowban": "Shadowban",
+        "meta_status_clean": "Təmiz",
+        "meta_status_restricted": "Məhdudiyyətli",
+        "meta_resolution": "Çözünürlük",
+        "meta_fps": "FPS",
+        "meta_bitrate": "Bitrate",
+        "meta_duration": "Müddət",
+        "meta_size": "Həcm",
+        "meta_views": "Baxış",
+        "meta_likes": "Bəyənmə",
+        "meta_comments": "Şərh",
+        "meta_shares": "Paylaşım",
+        "meta_saves": "Kolleksiya",
+        "meta_engagement": "İştirak Dərəcəsi",
+        "meta_analytics_title": "Video Metadata və Analitika"
       }
     },
     TR: {
@@ -351,7 +385,24 @@ const i18nConfig = {
         "ios_shortcut_btn": "Kestirme",
         "ios_shortcut_title": "iPhone Kestirmesi",
         "ios_shortcut_desc": "Panodaki linki otomatik alır, platformu belirler ve tek dokunuşla medyayı (MP4, MP3 veya fotoğrafları) Galerinize indirir.",
-        "ios_shortcut_add_btn": "Kestirmeyi Ekle"
+        "ios_shortcut_add_btn": "Kestirmeyi Ekle",
+        "meta_upload_date": "Yükleme Tarihi",
+        "meta_region": "Bölge",
+        "meta_shadowban": "Shadowban",
+        "meta_status_clean": "Temiz",
+        "meta_status_restricted": "Kısıtlı",
+        "meta_resolution": "Çözünürlük",
+        "meta_fps": "FPS",
+        "meta_bitrate": "Bit Hızı",
+        "meta_duration": "Süre",
+        "meta_size": "Dosya Boyutu",
+        "meta_views": "Görüntülenme",
+        "meta_likes": "Beğeni",
+        "meta_comments": "Yorum",
+        "meta_shares": "Paylaşım",
+        "meta_saves": "Kaydetme",
+        "meta_engagement": "Etkileşim Oranı",
+        "meta_analytics_title": "Video Metadata ve Analitik"
       }
     },
     RU: {
@@ -469,7 +520,24 @@ const i18nConfig = {
         "ios_shortcut_btn": "Команда",
         "ios_shortcut_title": "Команда для iPhone",
         "ios_shortcut_desc": "Автоматически считывает ссылку из буфера обмена, определяет платформу и скачивает MP4, MP3 или фото прямо в Галерею.",
-        "ios_shortcut_add_btn": "Добавить команду"
+        "ios_shortcut_add_btn": "Добавить команду",
+        "meta_upload_date": "Дата загрузки",
+        "meta_region": "Регион",
+        "meta_shadowban": "Теневой бан",
+        "meta_status_clean": "Чисто",
+        "meta_status_restricted": "Ограничено",
+        "meta_resolution": "Разрешение",
+        "meta_fps": "FPS",
+        "meta_bitrate": "Битрейт",
+        "meta_duration": "Длительность",
+        "meta_size": "Размер файла",
+        "meta_views": "Просмотры",
+        "meta_likes": "Лайки",
+        "meta_comments": "Комментарии",
+        "meta_shares": "Репосты",
+        "meta_saves": "В закладки",
+        "meta_engagement": "Вовлеченность",
+        "meta_analytics_title": "Метаданные и Аналитика видео"
       }
     }
   },

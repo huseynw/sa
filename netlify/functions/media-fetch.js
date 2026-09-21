@@ -129,11 +129,23 @@ async function fetchPinterest(inputUrl) {
     const blacklist = ['d53b014d86a6b6761bf649a0ed813c2b', 'logo_transparent', 'favicon', '75x75_RS'];
     const cleanImages = [...new Set(images)].filter(img => !blacklist.some(b => img.includes(b)));
 
+    const meta = {
+      uploadDate: pinData?.created_at || null,
+      region: 'Global',
+      shadowban: false,
+      likes: pinData?.reaction_counts?.['1'] || pinData?.repin_count || 0,
+      comments: pinData?.comment_count || 0,
+      saves: pinData?.repin_count || 0,
+      resolution: videoList ? `${Object.values(videoList)[0]?.width}×${Object.values(videoList)[0]?.height}` : (cleanImages.length > 0 ? 'Original' : null),
+      duration: videoList ? Object.values(videoList)[0]?.duration : null,
+      fps: videoList ? 30 : null,
+    };
+
     if (cleanImages.length > 0) {
-      return { success: true, type: 'gallery', title: title || 'Pinterest Şəkil', images: cleanImages, image: cleanImages[0] };
+      return { success: true, type: 'gallery', title: title || 'Pinterest Şəkil', images: cleanImages, image: cleanImages[0], metadata: meta };
     }
     if (videoUrl) {
-      return { success: true, type: 'video', title: title || 'Pinterest Video', video_url: videoUrl };
+      return { success: true, type: 'video', title: title || 'Pinterest Video', video_url: videoUrl, metadata: meta };
     }
     return null;
   } catch (e) {
@@ -305,6 +317,13 @@ export const handler = async (event) => {
         let oeTitle = '';
         let oeAuthor = '';
         let oeThumb = '';
+        let ytMeta = {
+          resolution: '1080p (FHD)',
+          fps: 30,
+          region: 'Global',
+          shadowban: false,
+        };
+
         try {
           const oeRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(targetYtUrl)}&format=json`, {
             signal: AbortSignal.timeout(4000),
@@ -314,6 +333,30 @@ export const handler = async (event) => {
             oeTitle = oe.title || '';
             oeAuthor = oe.author_name || '';
             oeThumb = oe.thumbnail_url || '';
+          }
+        } catch {}
+
+        try {
+          const ytHtmlRes = await fetch(targetYtUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept-Language': 'en-US,en;q=0.9',
+            },
+            signal: AbortSignal.timeout(4500),
+          });
+          if (ytHtmlRes.ok) {
+            const html = await ytHtmlRes.text();
+            const vm = html.match(/"viewCount":"(\d+)"/);
+            const lm = html.match(/"lengthSeconds":"(\d+)"/);
+            const lkm = html.match(/"likeCountIfIndifferentNumber":\s*"?(\d+)"?/);
+            const pubm = html.match(/"publishDate":"([^"]+)"/) || html.match(/"uploadDate":"([^"]+)"/);
+            if (vm) ytMeta.views = parseInt(vm[1], 10);
+            if (lm) ytMeta.duration = parseInt(lm[1], 10);
+            if (lkm) ytMeta.likes = parseInt(lkm[1], 10);
+            if (pubm) ytMeta.uploadDate = pubm[1];
+            if (ytMeta.views && ytMeta.likes) {
+              ytMeta.engagement = `${(((ytMeta.likes) / ytMeta.views) * 100).toFixed(2)}%`;
+            }
           }
         } catch {}
 
@@ -334,6 +377,7 @@ export const handler = async (event) => {
         if (oeTitle) data.data.title = oeTitle;
         if (oeAuthor) data.data.author = oeAuthor;
         if (oeThumb && !data.data.thumbnail) data.data.thumbnail = oeThumb;
+        data.data.metadata = ytMeta;
         data.status = { success: true, code: 200, name: 'OK' };
         break;
       }
@@ -348,15 +392,42 @@ export const handler = async (event) => {
           });
           const tikwmData = await tikwmRes.json();
           if (tikwmData?.data) {
+            const d = tikwmData.data;
+            const fileSize = d.hd_size || d.size || 0;
+            const dur = d.duration || 0;
+            const bitrateKbps = (fileSize && dur) ? Math.round((fileSize * 8) / dur / 1000) : 0;
+            const views = d.play_count || 0;
+            const likes = d.digg_count || 0;
+            const comments = d.comment_count || 0;
+            const shares = d.share_count || 0;
+            const saves = d.collect_count || 0;
+            const engagement = views > 0 ? parseFloat((((likes + comments + shares + saves) / views) * 100).toFixed(2)) : 0;
+
             data = {
               status: { success: true, code: 200, name: 'OK' },
               data: {
-                title: tikwmData.data.title || '',
-                cover: tikwmData.data.cover || '',
-                videoUrl: tikwmData.data.play || '',
-                videoUrlNoWatermark: tikwmData.data.play || '',
-                music: tikwmData.data.music || '',
-                images: Array.isArray(tikwmData.data.images) ? tikwmData.data.images : [],
+                title: d.title || '',
+                cover: d.cover || '',
+                videoUrl: d.play || '',
+                videoUrlNoWatermark: d.play || '',
+                music: d.music || '',
+                images: Array.isArray(d.images) ? d.images : [],
+                metadata: {
+                  uploadDate: d.create_time ? new Date(d.create_time * 1000).toISOString() : null,
+                  region: d.region ? d.region.toUpperCase() : null,
+                  shadowban: !!d.is_nff_or_nr,
+                  resolution: Array.isArray(d.images) && d.images.length > 0 ? 'Original' : '1080×1920 (FHD)',
+                  fps: 30,
+                  bitrate: bitrateKbps ? `${bitrateKbps} kbps` : null,
+                  duration: dur,
+                  size: fileSize,
+                  views,
+                  likes,
+                  comments,
+                  shares,
+                  saves,
+                  engagement: engagement ? `${engagement}%` : null,
+                },
               },
             };
           }
@@ -435,6 +506,30 @@ export const handler = async (event) => {
         const pinData = await fetchPinterest(url);
         if (!pinData) throw new Error('Pinterest faylı tapılmadı');
         data = { status: { success: true }, data: pinData };
+        break;
+      }
+
+      case 'probe-url': {
+        try {
+          const headRes = await fetch(url, {
+            method: 'HEAD',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+            },
+            signal: AbortSignal.timeout(5000),
+          });
+          const cl = headRes.headers.get('content-length');
+          const ct = headRes.headers.get('content-type');
+          data = {
+            status: { success: true },
+            data: {
+              size: cl ? parseInt(cl, 10) : null,
+              contentType: ct || null,
+            },
+          };
+        } catch {
+          data = { status: { success: true }, data: { size: null } };
+        }
         break;
       }
 

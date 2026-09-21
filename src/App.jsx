@@ -285,6 +285,7 @@ function App() {
           setResult({
             status: 'youtube_ready',
             url: fullUrl,
+            metadata: data.data.metadata || { views: item.views, duration: item.duration },
             previewMeta: {
               title: data.data.title || item.title,
               image: data.data.thumbnail || item.thumbnail,
@@ -295,6 +296,7 @@ function App() {
           setResult({
             status: 'youtube_ready',
             url: fullUrl,
+            metadata: { views: item.views, duration: item.duration },
             previewMeta: { title: item.title, image: item.thumbnail, description: item.author || '' },
           });
         }
@@ -303,6 +305,7 @@ function App() {
         setResult({
           status: 'youtube_ready',
           url: fullUrl,
+          metadata: { views: item.views, duration: item.duration },
           previewMeta: { title: item.title, image: item.thumbnail, description: item.author || '' },
         });
       })
@@ -348,6 +351,7 @@ function App() {
         setResult({
           status: 'youtube_ready',
           url: cleanYtUrl,
+          metadata: infoData?.data?.metadata || null,
           previewMeta: {
             title: title || 'YouTube Video',
             image,
@@ -400,6 +404,7 @@ function App() {
             downloadUrl: isGallery ? pickerItems[0]?.url : (d.videoUrl || d.download || d.video || d.play || null),
             mediaType: isGallery ? 'image' : 'video',
             musicUrl: d.music || null,
+            metadata: d.metadata || null,
             previewMeta: {
               title: d.title || (isGallery ? 'TikTok Şəkillər' : 'TikTok Video'),
               image: isGallery ? (pickerItems[0]?.thumb || d.cover) : (d.cover || d.author?.avatar || null),
@@ -465,6 +470,7 @@ function App() {
             proxyUrl: primaryMedia.proxyUrl || null,
             mediaType: mediaType,
             media: mediaItems,
+            metadata: d.metadata || null,
             previewMeta: {
               title: d.title || (d.username ? `@${d.username}` : 'Instagram Media'),
               image: d.thumbnail || primaryMedia.thumbnail || imagesList[0] || primaryMedia.url || null,
@@ -491,6 +497,7 @@ function App() {
           setResult({
             status: 'ready',
             url: url.trim(),
+            metadata: d.metadata || null,
             previewMeta: {
               title: d.title || 'Facebook Video',
               image: d.thumbnail || null,
@@ -524,6 +531,7 @@ function App() {
           url: url.trim(),
           downloadUrl: isGallery ? pickerItems[0]?.url : (pin.image || pin.video_url),
           mediaType: pin.type === 'video' ? 'video' : 'image',
+          metadata: pin.metadata || null,
           previewMeta: {
             title: pin.title || 'Pinterest Media',
             image: pin.image || pin.images?.[0] || null,
