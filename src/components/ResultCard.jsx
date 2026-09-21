@@ -60,20 +60,23 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
     const mediaUrl = result?.downloadUrl || result?.videoUrl || result?.proxyUrl;
 
     if (mediaUrl) {
-      if (!result?.metadata?.size) {
-        fetch('/.netlify/functions/media-fetch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'probe-url', url: mediaUrl }),
+      fetch('/.netlify/functions/media-fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'probe-url', url: mediaUrl }),
+      })
+        .then(r => r.json())
+        .then(d => {
+          if (isMounted && d?.data) {
+            setProbedMeta(prev => ({
+              ...prev,
+              size: d.data.size || prev.size,
+              fps: d.data.fps || prev.fps,
+              resolution: (d.data.width && d.data.height) ? `${d.data.width}×${d.data.height}` : prev.resolution,
+            }));
+          }
         })
-          .then(r => r.json())
-          .then(d => {
-            if (isMounted && d?.data?.size) {
-              setProbedMeta(prev => ({ ...prev, size: d.data.size }));
-            }
-          })
-          .catch(() => {});
-      }
+        .catch(() => {});
 
       if (result?.mediaType !== 'image' && !result?.previewMeta?.isImage) {
         const v = document.createElement('video');
@@ -90,6 +93,40 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
             }));
           }
         };
+
+        if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+          let frames = [];
+          const handleFrame = (now, metadata) => {
+            frames.push(metadata.mediaTime);
+            if (frames.length >= 8) {
+              const diffs = [];
+              for (let i = 1; i < frames.length; i++) {
+                const diff = frames[i] - frames[i - 1];
+                if (diff > 0.005 && diff < 0.2) diffs.push(diff);
+              }
+              if (diffs.length > 0) {
+                const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+                const raw = 1 / avg;
+                let detected = Math.round(raw);
+                if (Math.abs(raw - 29.97) < 0.8 || Math.abs(raw - 30) < 0.8) detected = 30;
+                else if (Math.abs(raw - 59.94) < 1.2 || Math.abs(raw - 60) < 1.2) detected = 60;
+                else if (Math.abs(raw - 23.98) < 0.8 || Math.abs(raw - 24) < 0.8) detected = 24;
+                else if (Math.abs(raw - 25) < 0.8) detected = 25;
+                else if (Math.abs(raw - 50) < 1.0) detected = 50;
+
+                if (isMounted && detected >= 15 && detected <= 240) {
+                  setProbedMeta(prev => ({ ...prev, fps: detected }));
+                }
+              }
+              v.pause();
+              v.src = '';
+              return;
+            }
+            v.requestVideoFrameCallback(handleFrame);
+          };
+          v.requestVideoFrameCallback(handleFrame);
+          v.play().catch(() => {});
+        }
       }
     }
 
@@ -363,10 +400,17 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
 
   const rawMeta = { ...result.metadata, ...probedMeta };
 
-  let finalBitrate = rawMeta.bitrate;
-  if (!finalBitrate && rawMeta.size && rawMeta.duration) {
-    const kbps = Math.round((rawMeta.size * 8) / rawMeta.duration / 1000);
-    if (kbps > 0) finalBitrate = `${kbps} kbps`;
+  let finalBitrate = null;
+  if (rawMeta.size && rawMeta.duration) {
+    const mbps = ((rawMeta.size * 8) / rawMeta.duration / 1000000).toFixed(2);
+    finalBitrate = `${mbps} Mbps`;
+  } else if (rawMeta.bitrate) {
+    if (typeof rawMeta.bitrate === 'string' && rawMeta.bitrate.includes('kbps')) {
+      const num = parseFloat(rawMeta.bitrate);
+      finalBitrate = !isNaN(num) ? `${(num / 1000).toFixed(2)} Mbps` : rawMeta.bitrate;
+    } else {
+      finalBitrate = rawMeta.bitrate;
+    }
   }
 
   let finalEngagement = rawMeta.engagement;

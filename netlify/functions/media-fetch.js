@@ -319,7 +319,7 @@ export const handler = async (event) => {
         let oeThumb = '';
         let ytMeta = {
           resolution: '1080p (FHD)',
-          fps: 30,
+          fps: null,
           region: 'Global',
           shadowban: false,
         };
@@ -395,7 +395,7 @@ export const handler = async (event) => {
             const d = tikwmData.data;
             const fileSize = d.hd_size || d.size || 0;
             const dur = d.duration || 0;
-            const bitrateKbps = (fileSize && dur) ? Math.round((fileSize * 8) / dur / 1000) : 0;
+            const bitrateMbps = (fileSize && dur) ? ((fileSize * 8) / dur / 1000000).toFixed(2) : null;
             const views = d.play_count || 0;
             const likes = d.digg_count || 0;
             const comments = d.comment_count || 0;
@@ -417,8 +417,8 @@ export const handler = async (event) => {
                   region: d.region ? d.region.toUpperCase() : null,
                   shadowban: !!d.is_nff_or_nr,
                   resolution: Array.isArray(d.images) && d.images.length > 0 ? 'Original' : '1080×1920 (FHD)',
-                  fps: 30,
-                  bitrate: bitrateKbps ? `${bitrateKbps} kbps` : null,
+                  fps: null,
+                  bitrate: bitrateMbps ? `${bitrateMbps} Mbps` : null,
                   duration: dur,
                   size: fileSize,
                   views,
@@ -511,24 +511,106 @@ export const handler = async (event) => {
 
       case 'probe-url': {
         try {
-          const headRes = await fetch(url, {
-            method: 'HEAD',
+          const res = await fetch(url, {
             headers: {
+              'Range': 'bytes=0-262144',
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
             },
-            signal: AbortSignal.timeout(5000),
+            signal: AbortSignal.timeout(6000),
           });
-          const cl = headRes.headers.get('content-length');
-          const ct = headRes.headers.get('content-type');
+          const cr = res.headers.get('content-range');
+          const cl = res.headers.get('content-length');
+          const ct = res.headers.get('content-type');
+          const totalSize = cr ? parseInt(cr.split('/')[1], 10) : (cl ? parseInt(cl, 10) : null);
+          let fps = null;
+          let width = null;
+          let height = null;
+
+          try {
+            const ab = await res.arrayBuffer();
+            const buf = Buffer.from(ab);
+            const parseBoxes = (buffer, start, end) => {
+              const boxes = [];
+              let off = start;
+              while (off + 8 <= end && off + 8 <= buffer.length) {
+                let sz = buffer.readUInt32BE(off);
+                const nm = buffer.toString('ascii', off + 4, off + 8);
+                if (sz === 0) sz = end - off;
+                let hSz = 8;
+                if (sz === 1) {
+                  if (off + 16 > buffer.length) break;
+                  sz = Number(buffer.readBigUInt64BE(off + 8));
+                  hSz = 16;
+                }
+                const bEnd = Math.min(off + sz, end);
+                boxes.push({ name: nm, offset: off, size: sz, headerSize: hSz, boxEnd: bEnd, contentStart: off + hSz });
+                off = bEnd;
+              }
+              return boxes;
+            };
+
+            const findDeepBox = (buffer, path, start, end) => {
+              let cs = start, ce = end, cb = null;
+              for (const nm of path) {
+                const ch = parseBoxes(buffer, cs, ce);
+                cb = ch.find(b => b.name === nm);
+                if (!cb) return null;
+                cs = cb.contentStart;
+                ce = cb.boxEnd;
+              }
+              return cb;
+            };
+
+            const moov = parseBoxes(buf, 0, buf.length).find(b => b.name === 'moov');
+            if (moov) {
+              const traks = parseBoxes(buf, moov.contentStart, moov.boxEnd).filter(b => b.name === 'trak');
+              for (const trak of traks) {
+                const hdlr = findDeepBox(buf, ['mdia', 'hdlr'], trak.contentStart, trak.boxEnd);
+                if (hdlr && buf.toString('ascii', hdlr.contentStart + 8, hdlr.contentStart + 12) === 'vide') {
+                  const mdhd = findDeepBox(buf, ['mdia', 'mdhd'], trak.contentStart, trak.boxEnd);
+                  let timescale = 0;
+                  if (mdhd) {
+                    const v = buf.readUInt8(mdhd.contentStart);
+                    timescale = v === 1 ? buf.readUInt32BE(mdhd.contentStart + 20) : buf.readUInt32BE(mdhd.contentStart + 12);
+                  }
+                  const stts = findDeepBox(buf, ['mdia', 'minf', 'stbl', 'stts'], trak.contentStart, trak.boxEnd);
+                  if (stts && timescale > 0) {
+                    const cnt = buf.readUInt32BE(stts.contentStart + 4);
+                    if (cnt > 0) {
+                      const delta = buf.readUInt32BE(stts.contentStart + 12);
+                      if (delta > 0) {
+                        const rawFps = timescale / delta;
+                        fps = Math.round(rawFps * 10) / 10;
+                      }
+                    }
+                  }
+                  const tkhd = findDeepBox(buf, ['tkhd'], trak.contentStart, trak.boxEnd);
+                  if (tkhd) {
+                    const v = buf.readUInt8(tkhd.contentStart);
+                    const wOff = tkhd.contentStart + (v === 1 ? 88 : 76);
+                    if (wOff + 8 <= buf.length) {
+                      width = buf.readUInt32BE(wOff) >> 16;
+                      height = buf.readUInt32BE(wOff + 4) >> 16;
+                    }
+                  }
+                  break;
+                }
+              }
+            }
+          } catch {}
+
           data = {
             status: { success: true },
             data: {
-              size: cl ? parseInt(cl, 10) : null,
+              size: totalSize,
               contentType: ct || null,
+              fps,
+              width,
+              height,
             },
           };
         } catch {
-          data = { status: { success: true }, data: { size: null } };
+          data = { status: { success: true }, data: { size: null, fps: null } };
         }
         break;
       }
