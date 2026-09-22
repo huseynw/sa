@@ -421,6 +421,7 @@ export const handler = async (event) => {
                   bitrate: bitrateMbps ? `${bitrateMbps} Mbps` : null,
                   duration: dur,
                   size: fileSize,
+                  method: 'TikTok Standard',
                   views,
                   likes,
                   comments,
@@ -685,7 +686,7 @@ export const handler = async (event) => {
               fps,
               width,
               height,
-              method,
+              method: method || 'TikTok Standard',
             },
           };
         } catch {

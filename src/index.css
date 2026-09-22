@@ -1297,7 +1297,9 @@ main {
     padding: 8px 10px;
   }
   .meta-metric-card.wide {
-    grid-column: 1 / -1;
+    grid-column: span 2 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
 
