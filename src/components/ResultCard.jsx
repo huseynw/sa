@@ -73,6 +73,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
               size: d.data.size || prev.size,
               fps: d.data.fps || prev.fps,
               resolution: (d.data.width && d.data.height) ? `${d.data.width}×${d.data.height}` : prev.resolution,
+              method: d.data.method || prev.method,
             }));
           }
         })
@@ -880,6 +881,7 @@ const VideoMetadataPanel = ({ meta }) => {
     { id: 'bitrate', icon: 'fa-solid fa-wave-square', label: t('meta_bitrate'), val: meta.bitrate },
     { id: 'duration', icon: 'fa-solid fa-clock', label: t('meta_duration'), val: formatDuration(meta.duration) },
     { id: 'size', icon: 'fa-solid fa-hard-drive', label: t('meta_size'), val: formatBytes(meta.size) },
+    { id: 'method', icon: 'fa-solid fa-wrench', label: t('meta_method'), val: meta.method },
     { id: 'uploadDate', icon: 'fa-solid fa-calendar-days', label: t('meta_upload_date'), val: formatDate(meta.uploadDate) },
     { id: 'region', icon: 'fa-solid fa-globe', label: t('meta_region'), val: meta.region },
   ].filter(item => item.val !== null && item.val !== undefined && item.val !== '');

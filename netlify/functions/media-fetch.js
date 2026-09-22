@@ -513,7 +513,7 @@ export const handler = async (event) => {
         try {
           const res = await fetch(url, {
             headers: {
-              'Range': 'bytes=0-262144',
+              'Range': 'bytes=0-524288',
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
             },
             signal: AbortSignal.timeout(6000),
@@ -525,6 +525,7 @@ export const handler = async (event) => {
           let fps = null;
           let width = null;
           let height = null;
+          let method = null;
 
           try {
             const ab = await res.arrayBuffer();
@@ -596,6 +597,83 @@ export const handler = async (event) => {
                   break;
                 }
               }
+
+              const udta = parseBoxes(buf, moov.contentStart, moov.boxEnd).find(b => b.name === 'udta');
+              if (udta) {
+                let comment = null;
+                let encoder = null;
+                const uBoxes = parseBoxes(buf, udta.contentStart, udta.boxEnd);
+                const meta = uBoxes.find(b => b.name === 'meta');
+                if (meta) {
+                  let mStart = meta.contentStart;
+                  if (mStart + 8 <= meta.boxEnd) {
+                    const sub4 = buf.toString('ascii', mStart + 4, mStart + 8);
+                    if (sub4 === 'ilst' || sub4 === 'hdlr') mStart += 4;
+                  }
+                  const mBoxes = parseBoxes(buf, mStart, meta.boxEnd);
+                  const ilst = mBoxes.find(b => b.name === 'ilst');
+                  if (ilst) {
+                    const items = parseBoxes(buf, ilst.contentStart, ilst.boxEnd);
+                    for (const item of items) {
+                      const dataBox = parseBoxes(buf, item.contentStart, item.boxEnd).find(b => b.name === 'data');
+                      if (dataBox && dataBox.contentStart + 8 <= dataBox.boxEnd) {
+                        const val = buf.toString('utf8', dataBox.contentStart + 8, dataBox.boxEnd).replace(/\0/g, '').trim();
+                        if (item.name === '\xA9cmt' || item.name === 'cmt') comment = val;
+                        if (item.name === '\xA9too' || item.name === 'too') encoder = val;
+                      }
+                    }
+                  }
+                }
+
+                const udtaStr = buf.toString('utf8', udta.contentStart, udta.boxEnd);
+                if (!comment) {
+                  if (udtaStr.includes('Compressbase')) {
+                    const match = udtaStr.match(/Patched by Compressbase(?:\.com)?/i);
+                    comment = match ? match[0] : 'Patched by Compressbase.com';
+                  } else if (udtaStr.includes('Upload120')) {
+                    const match = udtaStr.match(/Patched by Upload120(?:\.com)?/i);
+                    comment = match ? match[0] : 'Patched by Upload120';
+                  } else if (udtaStr.includes('Flowload')) {
+                    comment = 'Patched by Flowload';
+                  } else if (udtaStr.includes('aigc_label_type')) {
+                    const match = udtaStr.match(/\{"aigc_label_type":\s*\d+\}/);
+                    comment = match ? match[0] : '{"aigc_label_type":0}';
+                  } else if (udtaStr.includes('vid:v')) {
+                    const match = udtaStr.match(/vid:v[a-zA-Z0-9]+/);
+                    comment = match ? match[0] : null;
+                  }
+                }
+                if (!encoder) {
+                  const lavfMatch = udtaStr.match(/Lavf[0-9.]+/);
+                  if (lavfMatch) encoder = lavfMatch[0];
+                  else if (udtaStr.includes('CapCut')) encoder = 'CapCut';
+                  else if (udtaStr.includes('HandBrake')) encoder = 'HandBrake';
+                  else if (udtaStr.includes('Premiere')) encoder = 'Adobe Premiere';
+                  else if (udtaStr.includes('DaVinci')) encoder = 'DaVinci Resolve';
+                }
+
+                method = comment || encoder || null;
+              }
+
+              if (!method) {
+                const moovStr = buf.toString('utf8', moov.contentStart, moov.boxEnd);
+                if (moovStr.includes('Compressbase')) {
+                  const match = moovStr.match(/Patched by Compressbase(?:\.com)?/i);
+                  method = match ? match[0] : 'Patched by Compressbase.com';
+                } else if (moovStr.includes('Upload120')) {
+                  const match = moovStr.match(/Patched by Upload120(?:\.com)?/i);
+                  method = match ? match[0] : 'Patched by Upload120';
+                } else if (moovStr.includes('aigc_label_type')) {
+                  const match = moovStr.match(/\{"aigc_label_type":\s*\d+\}/);
+                  method = match ? match[0] : null;
+                } else if (moovStr.includes('vid:v')) {
+                  const match = moovStr.match(/vid:v[a-zA-Z0-9]+/);
+                  method = match ? match[0] : null;
+                } else {
+                  const lavfMatch = moovStr.match(/Lavf[0-9.]+/);
+                  if (lavfMatch) method = lavfMatch[0];
+                }
+              }
             }
           } catch {}
 
@@ -607,10 +685,11 @@ export const handler = async (event) => {
               fps,
               width,
               height,
+              method,
             },
           };
         } catch {
-          data = { status: { success: true }, data: { size: null, fps: null } };
+          data = { status: { success: true }, data: { size: null, fps: null, method: null } };
         }
         break;
       }
