@@ -856,7 +856,9 @@ function formatDate(dateStr) {
   try {
     const dt = new Date(dateStr);
     if (isNaN(dt.getTime())) return dateStr;
-    return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    const date = dt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    const time = dt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return `${date}, ${time}`;
   } catch {
     return dateStr;
   }
