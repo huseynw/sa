@@ -904,17 +904,20 @@ const VideoMetadataPanel = ({ meta }) => {
       </div>
 
       <div className="meta-analytics-grid">
-        {items.map(item => (
-          <div key={item.id} className="meta-metric-card">
-            <div className="meta-metric-icon">
-              <i className={item.icon} />
+        {items.map(item => {
+          const isWide = item.id === 'uploadDate' || item.id === 'method';
+          return (
+            <div key={item.id} className={`meta-metric-card ${isWide ? 'wide' : ''}`}>
+              <div className="meta-metric-icon">
+                <i className={item.icon} />
+              </div>
+              <div className="meta-metric-info">
+                <span className="meta-metric-label">{item.label}</span>
+                <span className="meta-metric-value">{item.val}</span>
+              </div>
             </div>
-            <div className="meta-metric-info">
-              <span className="meta-metric-label">{item.label}</span>
-              <span className="meta-metric-value">{item.val}</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

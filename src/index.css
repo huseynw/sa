@@ -1238,6 +1238,11 @@ main {
   border-radius: 12px;
   padding: 8px 12px;
   transition: transform 0.2s ease, background 0.2s ease;
+  min-width: 0;
+}
+
+.meta-metric-card.wide {
+  grid-column: span 2;
 }
 
 .meta-metric-card:hover {
@@ -1261,7 +1266,8 @@ main {
 .meta-metric-info {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  min-width: 0;
+  flex: 1;
 }
 
 .meta-metric-label {
@@ -1269,18 +1275,17 @@ main {
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  margin-bottom: 2px;
 }
 
 .meta-metric-value {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 600px) {
@@ -1290,6 +1295,9 @@ main {
   }
   .meta-metric-card {
     padding: 8px 10px;
+  }
+  .meta-metric-card.wide {
+    grid-column: 1 / -1;
   }
 }
 
