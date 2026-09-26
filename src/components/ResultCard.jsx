@@ -324,8 +324,14 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           finalDlUrl = `${finalDlUrl}&title=${encodeURIComponent(cleanTitleOnly)}`;
         }
 
+        const metaPayload = {
+          title: result?.previewMeta?.title || baseTitle,
+          artist: result?.previewMeta?.description || result?.author || '',
+          coverUrl: previewImg || result?.previewMeta?.image || result?.cover || null,
+        };
+
         try {
-          await downloadFile(finalDlUrl, safeName, (prog) => setProgressData(prog));
+          await downloadFile(finalDlUrl, safeName, (prog) => setProgressData(prog), metaPayload);
         } catch (downloadErr) {
           console.warn('XHR download failed, using direct attachment link:', downloadErr);
           setProgressData({ percent: 100, speed: 'Yüklənir...' });
