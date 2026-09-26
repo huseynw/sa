@@ -172,6 +172,27 @@ function App() {
     }
   }, [i18n]);
 
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const shared = params.get('url') || params.get('text') || params.get('title');
+      if (shared) {
+        const match = shared.match(/https?:\/\/[^\s]+/i);
+        const targetUrl = match ? match[0] : (shared.startsWith('http') ? shared.trim() : '');
+        if (targetUrl) {
+          for (const p of platforms) {
+            if (isValidUrlForPlatform(targetUrl, p.id)) {
+              setActivePlatform(p);
+              setUrls(prev => ({ ...prev, [p.id]: targetUrl }));
+              break;
+            }
+          }
+          window.history.replaceState({}, '', '/');
+        }
+      }
+    } catch {}
+  }, []);
+
   const [activePlatform, setActivePlatform] = useState(platforms[0]);
   const [hoveredTab, setHoveredTab] = useState(null);
   const [urls,     setUrls]     = useState({});
