@@ -30,6 +30,69 @@ const convertBlobToJpg = async (blob) => {
   });
 };
 
+const convertBlobToMp3 = async (blob) => {
+  if (!blob) return blob;
+  try {
+    const headerBuf = await blob.slice(0, 16).arrayBuffer();
+    const header = new Uint8Array(headerBuf);
+    const isMp3 = (header[0] === 0x49 && header[1] === 0x44 && header[2] === 0x33) ||
+                  (header[0] === 0xFF && (header[1] & 0xE0) === 0xE0);
+    if (isMp3) return blob;
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return blob;
+
+    const audioCtx = new AudioContextClass();
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      const channels = Math.min(2, audioBuffer.numberOfChannels);
+      const sampleRate = audioBuffer.sampleRate;
+      const { Mp3Encoder } = await import('@breezystack/lamejs');
+
+      const floatTo16BitPCM = (f32) => {
+        const out = new Int16Array(f32.length);
+        for (let i = 0; i < f32.length; i++) {
+          const s = Math.max(-1, Math.min(1, f32[i]));
+          out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        return out;
+      };
+
+      const left = floatTo16BitPCM(audioBuffer.getChannelData(0));
+      const right = channels === 2 ? floatTo16BitPCM(audioBuffer.getChannelData(1)) : null;
+
+      const encoder = new Mp3Encoder(channels, sampleRate, 192);
+      const mp3Chunks = [];
+      const blockSize = 1152;
+
+      for (let i = 0; i < left.length; i += blockSize) {
+        const l = left.subarray(i, i + blockSize);
+        let buf;
+        if (channels === 2 && right) {
+          const r = right.subarray(i, i + blockSize);
+          buf = encoder.encodeBuffer(l, r);
+        } else {
+          buf = encoder.encodeBuffer(l);
+        }
+        if (buf.length > 0) {
+          mp3Chunks.push(buf);
+        }
+      }
+      const end = encoder.flush();
+      if (end.length > 0) {
+        mp3Chunks.push(end);
+      }
+
+      return new Blob(mp3Chunks, { type: 'audio/mpeg' });
+    } finally {
+      try { await audioCtx.close(); } catch {}
+    }
+  } catch {
+    return blob;
+  }
+};
+
 export const downloadFile = async (url, filename, onProgress) => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -70,9 +133,12 @@ export const downloadFile = async (url, filename, onProgress) => {
             blob = await convertBlobToJpg(blob);
             outName = outName.replace(/\.(webp|png|jpeg)$/i, '') + '.jpg';
             if (!outName.toLowerCase().endsWith('.jpg')) outName += '.jpg';
-          } catch (e) {
-            console.warn('JPG conversion error:', e);
-          }
+          } catch {}
+        } else if (outName.toLowerCase().endsWith('.mp3')) {
+          try {
+            onProgress && onProgress({ percent: 99, speed: 'MP3...' });
+            blob = await convertBlobToMp3(blob);
+          } catch {}
         }
 
         const blobUrl = window.URL.createObjectURL(blob);
