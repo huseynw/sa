@@ -1,4 +1,4 @@
-const CACHE_NAME = 'husevn-pwa-v1';
+const CACHE_NAME = 'husevn-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -66,3 +66,4 @@ self.addEventListener('fetch', (e) => {
     }).catch(() => {})
   );
 });
+
