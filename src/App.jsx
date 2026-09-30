@@ -201,6 +201,18 @@ function App() {
   const [loadings, setLoadings] = useState({});
   const [urlErrors, setUrlErrors] = useState({});
   const [showUploadMethod, setShowUploadMethod] = useState(false);
+  const [ttMethodCount, setTtMethodCount] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(d => {
+        if (d && !d.error) {
+          setTtMethodCount(d.tiktokMethodCount || d.platformDownloads?.tiktok_method || 0);
+        }
+      })
+      .catch(() => {});
+  }, [showUploadMethod]);
 
   const [ytMode, setYtMode] = useState('link');
   const [searchQuery, setSearchQuery] = useState('');
@@ -597,6 +609,11 @@ function App() {
               <i className="fa-brands fa-tiktok" />
               <span className="btn-hero-tt-title">{t('tt_banner_title', 'TikTok Studio Upload Metodu')}</span>
               <span className="btn-hero-tt-badge">120 FPS HQ</span>
+              {ttMethodCount > 0 && (
+                <span className="btn-hero-tt-count" title={`${ttMethodCount} video`}>
+                  <i className="fa-solid fa-bolt" /> {ttMethodCount}
+                </span>
+              )}
               <i className="fa-solid fa-arrow-right btn-hero-tt-chevron" />
             </button>
           </div>
@@ -756,28 +773,6 @@ function App() {
                     )}
                   </form>
                 )}
-                {pid === 'tiktok' && (
-                  <div className="tt-upload-method-banner" onClick={() => setShowUploadMethod(true)}>
-                    <div className="tt-banner-left">
-                      <div className="tt-banner-icon">
-                        <i className="fa-brands fa-tiktok" />
-                      </div>
-                      <div className="tt-banner-text">
-                        <div className="tt-banner-title">
-                          <span>{t('tt_banner_title', 'TikTok Studio Upload Metodu')}</span>
-                          <span className="tt-banner-badge">60 / 120 FPS</span>
-                        </div>
-                        <p className="tt-banner-sub">
-                          {t('tt_banner_sub', 'Videonun keyfiyyətini qoru, 30 FPS həddini aş (Encoder: husevndownloader.netlify.app)')}
-                        </p>
-                      </div>
-                    </div>
-                    <button type="button" className="btn btn-banner-action">
-                      <i className="fa-solid fa-wand-magic-sparkles" />
-                      <span>{t('tt_banner_btn', 'Metodu Aç')}</span>
-                    </button>
-                  </div>
-                )}
                 {searchLoading && (
                   <div style={{ padding: '20px', textAlign: 'center' }}>
                     <span className="spinner" style={{ borderTopColor: 'var(--text2)' }} />
@@ -819,6 +814,33 @@ function App() {
               </div>
             ) : (
               <div className={`platform-search-area ${activePFull.cls}`}>
+                {pid === 'tiktok' && (
+                  <div className="tt-upload-method-banner" onClick={() => setShowUploadMethod(true)}>
+                    <div className="tt-banner-left">
+                      <div className="tt-banner-icon">
+                        <i className="fa-brands fa-tiktok" />
+                      </div>
+                      <div className="tt-banner-text">
+                        <div className="tt-banner-title">
+                          <span>{t('tt_banner_title', 'TikTok Studio Upload Metodu')}</span>
+                          <span className="tt-banner-badge">60 / 120 FPS</span>
+                          {ttMethodCount > 0 && (
+                            <span className="tt-banner-stat-badge">
+                              <i className="fa-solid fa-bolt" /> {ttMethodCount} video
+                            </span>
+                          )}
+                        </div>
+                        <p className="tt-banner-sub">
+                          {t('tt_banner_sub', 'Videonun keyfiyyətini qoru, 30 FPS həddini aş (Encoder: husevndownloader.netlify.app)')}
+                        </p>
+                      </div>
+                    </div>
+                    <button type="button" className="btn btn-banner-action">
+                      <i className="fa-solid fa-wand-magic-sparkles" />
+                      <span>{t('tt_banner_btn', 'Metodu Aç')}</span>
+                    </button>
+                  </div>
+                )}
                 <form onSubmit={handleSearch}>
                   <div className={`search-wrapper ${activePFull.cls} ${urlError ? 'input-error' : ''}`}>
                     <i className="fa-solid fa-link" style={{ color: 'var(--text3)', marginLeft: '12px', fontSize: '0.9rem' }} />

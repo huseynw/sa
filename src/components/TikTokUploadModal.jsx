@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { patchMp4, probeMp4Metadata, ENCODER_TAG, COMMENT_TAG } from '../utils/mp4Patcher';
@@ -6,6 +6,22 @@ import { patchMp4, probeMp4Metadata, ENCODER_TAG, COMMENT_TAG } from '../utils/m
 export default function TikTokUploadModal({ isOpen, onClose }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('patcher'); // 'patcher' | 'guide'
+
+  // Live statistics state
+  const [statsCount, setStatsCount] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch('/api/stats')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && !d.error) {
+          const count = d.tiktokMethodCount || d.platformDownloads?.tiktok_method || 0;
+          setStatsCount(count);
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   // Patcher states
   const [file, setFile] = useState(null);
@@ -101,6 +117,15 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
       setTimeout(() => {
         if (document.body.contains(a)) document.body.removeChild(a);
       }, 2000);
+
+      // Record TikTok method statistic
+      setStatsCount((prev) => prev + 1);
+      fetch('/api/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'tiktok_method', platform: 'tiktok_method' }),
+        keepalive: true,
+      }).catch(() => {});
     } catch (err) {
       console.error('Patch error:', err);
       setError(err.message || t('tt_modal_err_generic', 'Faylı emal edərkən xəta baş verdi.'));
@@ -136,6 +161,11 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
               <div>
                 <div className="tt-modal-title-row">
                   <h3>{t('tt_modal_title', 'TikTok Studio Upload Metodu')}</h3>
+                  {statsCount > 0 && (
+                    <span className="tt-stats-pill" title={t('tt_stats_label', 'Bu metodla hazırlanan videolar:') + ' ' + statsCount}>
+                      <i className="fa-solid fa-bolt" /> {statsCount} video
+                    </span>
+                  )}
                 </div>
                 <p className="shortcut-subtitle">
                   {t('tt_modal_sub', 'HUSEVN 120 FPS Method & FastStart Optimizer')}
@@ -182,6 +212,17 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                     'HUSEVN 120 FPS metodunu (husevndownloader.netlify.app) birbaşa cihazınızda tətbiq edir. Video kadrlarına və sürətinə toxunmur, audio sample cədvəli və mvhd optimizasiyası ilə TikTok-un ən yüksək keyfiyyət kanalını işə salır.'
                   )}
                 </p>
+
+                {/* Live Counter Banner */}
+                <div className="tt-stats-counter-banner">
+                  <div className="tt-stats-counter-icon">
+                    <i className="fa-solid fa-bolt-lightning" />
+                  </div>
+                  <div className="tt-stats-counter-text">
+                    <span className="tt-stats-counter-label">{t('tt_stats_label', 'Bu metodla hazırlanan videolar:')}</span>
+                    <strong className="tt-stats-counter-num">{statsCount}</strong>
+                  </div>
+                </div>
 
                 {/* Dropzone */}
                 {!file ? (
@@ -352,6 +393,10 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                               'Fayl avtomatik endirildi. İndi bu videonu TikTok Studio (PC brauzeri) vasitəsilə yükləyin.'
                             )}
                           </p>
+                          <div className="tt-success-stats-badge">
+                            <i className="fa-solid fa-bolt-lightning" />
+                            <span>{t('tt_stats_label', 'Bu metodla hazırlanan videolar:')} <strong>{statsCount}</strong></span>
+                          </div>
                           <a
                             href={result.url}
                             download={result.name}

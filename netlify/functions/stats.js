@@ -6,12 +6,14 @@ const STATS_KEY  = 'stats';
 const DEFAULT_STATS = {
   totalVisits: 0,
   totalDownloads: 0,
+  tiktokMethodCount: 0,
   platformDownloads: {
     youtube: 0,
     tiktok: 0,
     instagram: 0,
     pinterest: 0,
     facebook: 0,
+    tiktok_method: 0,
   },
   lastUpdated: new Date().toISOString(),
 };
@@ -51,6 +53,11 @@ export default async (req, context) => {
         stats.totalDownloads = (stats.totalDownloads || 0) + 1;
         stats.platformDownloads = stats.platformDownloads || {};
         stats.platformDownloads[platform] = (stats.platformDownloads[platform] || 0) + 1;
+      } else if (action === 'tiktok_method' || platform === 'tiktok_method') {
+        stats.tiktokMethodCount = (stats.tiktokMethodCount || 0) + 1;
+        stats.totalDownloads = (stats.totalDownloads || 0) + 1;
+        stats.platformDownloads = stats.platformDownloads || {};
+        stats.platformDownloads.tiktok_method = (stats.platformDownloads.tiktok_method || 0) + 1;
       }
 
       stats.lastUpdated = new Date().toISOString();

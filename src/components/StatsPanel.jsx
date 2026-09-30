@@ -102,6 +102,7 @@ const PLATFORM_META = [
   { id: 'instagram', label: 'Instagram', icon: 'fa-brands fa-instagram', color: '#dd2a7b' },
   { id: 'pinterest', label: 'Pinterest', icon: 'fa-brands fa-pinterest', color: '#e60023' },
   { id: 'facebook',  label: 'Facebook',  icon: 'fa-brands fa-facebook',  color: '#1877f2' },
+  { id: 'tiktok_method', label: 'TikTok 120 FPS Metod', icon: 'fa-solid fa-bolt-lightning', color: '#00f2fe' },
 ];
 
 export default function StatsPanel() {
@@ -109,7 +110,8 @@ export default function StatsPanel() {
   const [stats, setStats] = useState({
     totalVisits: 0,
     totalDownloads: 0,
-    platformDownloads: { youtube: 0, tiktok: 0, instagram: 0, pinterest: 0, facebook: 0 },
+    tiktokMethodCount: 0,
+    platformDownloads: { youtube: 0, tiktok: 0, instagram: 0, pinterest: 0, facebook: 0, tiktok_method: 0 },
   });
   const [started, setStarted] = useState(false);
   const panelRef = useRef(null);
@@ -172,9 +174,17 @@ export default function StatsPanel() {
           started={started}
         />
         <StatCard
+          icon="fa-solid fa-bolt-lightning"
+          label={t('stats_tiktok_method_card', '120 FPS TikTok Metod')}
+          value={stats?.tiktokMethodCount || stats?.platformDownloads?.tiktok_method || 0}
+          color="#00f2fe"
+          delay={0.15}
+          started={started}
+        />
+        <StatCard
           icon="fa-solid fa-globe"
           label={t('stats_platforms')}
-          value={5}
+          value={6}
           color="#f59e0b"
           delay={0.2}
           started={started}
@@ -196,7 +206,7 @@ export default function StatsPanel() {
             <PlatformRow
               key={p.id}
               icon={p.icon}
-              label={p.label}
+              label={p.id === 'tiktok_method' ? t('stats_tiktok_method_card', p.label) : p.label}
               value={pd[p.id] || 0}
               color={p.color}
               maxVal={maxPlatform}
