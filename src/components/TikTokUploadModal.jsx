@@ -179,7 +179,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <p className="shortcut-desc">
                   {t(
                     'tt_modal_patcher_desc',
-                    'Faylınızı birbaşa brauzerinizdə dərhal FastStart containerə keçirir və husevndownloader.netlify.app encoder teqi ilə TikTok Studio üçün hazır edir.'
+                    'Upload120 / Void Studio metodunu brauzerinizdə tətbiq edir. Itsscale ×2 vaxt miqyası tətbiq edərək TikTok-un serverini videonuza yüksək keyfiyyət ayırmasına məcbur edir.'
                   )}
                 </p>
 
@@ -299,7 +299,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                           <p className="tt-preset-desc">
                             {t(
                               'tt_preset_studio_desc',
-                              'FastStart moov konteynerləşdirməsi və husevndownloader.netlify.app encoder imzası. Orijinal 60 FPS axıcılığı və tam video müddəti 100% qorunur, heç bir kəsilmə baş vermir.'
+                              'Itsscale ×2 vaxt miqyası + FastStart + encoder imzası. TikTok-un serverini videonuza yüksək keyfiyyət ayırmasına məcbur edir. Yüklənən fayl adi pleyerdə yavaş görünəcək — bu normaldır, TikTok-da düzgün oynar.'
                             )}
                           </p>
                         </div>

@@ -2,17 +2,17 @@
  * mp4Patcher.js
  * In-browser binary MP4 patcher for TikTok Studio High Quality Upload Method.
  * 
- * Fixes:
- * 1. ZERO frame / duration cutting: Samples and presentation timestamps (PTS/DTS)
- *    are 100% preserved. No timescale scaling or duration distortion.
- * 2. True 60 FPS preservation: Maintains original native framerate without degrading to 30.
- * 3. FastStart Optimization: Relocates 'moov' atom before 'mdat', accurately
- *    updating both 32-bit (stco) and 64-bit (co64) chunk offsets by traversing
- *    the exact box tree hierarchy (moov -> trak -> mdia -> minf -> stbl -> stco/co64).
- * 4. Metadata Injection: Injects 'husevndownloader.netlify.app' encoder tag (©too)
- *    and method comment (©cmt) in standard Apple iTunes format.
- * 5. Built-in metadata inspector: Probes resolution, FPS, duration, bitrate,
- *    and FastStart status in milliseconds.
+ * Core Technique — ITSSCALE EMULATION:
+ * Replicates `ffmpeg -itsscale 2 -i input.mp4 -c copy output.mp4` purely
+ * in the browser by scaling ALL timing fields (mvhd/tkhd/mdhd duration,
+ * stts deltas, ctts offsets, elst entries) by ×2 in the moov atom.
+ * This makes TikTok's server-side quality classifier treat the file as a
+ * high-quality source, preserving FPS and preventing aggressive re-encoding.
+ *
+ * Additional:
+ * - FastStart Optimization: moov before mdat, with accurate stco/co64 updates
+ * - Metadata Injection: husevndownloader.netlify.app encoder tag (©too/©cmt)
+ * - Built-in metadata inspector (resolution, FPS, duration, bitrate)
  */
 
 export const ENCODER_TAG = 'husevndownloader.netlify.app';
@@ -326,9 +326,173 @@ function buildUdtaBox(encoder = ENCODER_TAG, comment = COMMENT_TAG) {
 }
 
 /**
+ * ITSSCALE EMULATION — The core of the TikTok Upload Method.
+ *
+ * Equivalent to: ffmpeg -itsscale <scaleFactor> -i input.mp4 -c copy output.mp4
+ *
+ * Multiplies ALL presentation timestamps by scaleFactor, which changes
+ * how TikTok's server-side quality classifier reads the file. Upload120,
+ * Void Studio, and Compressbase all use similar binary-level manipulation.
+ *
+ * CRITICAL: We update EVERY timing-related field consistently:
+ *   mvhd duration, tkhd duration, mdhd duration, stts sample_delta,
+ *   ctts sample_offset, elst segment_duration & media_time.
+ *
+ * If any field is missed the file becomes internally inconsistent and
+ * players/TikTok will truncate, desync, or reject the video.
+ *
+ * NOTE: The downloaded file will appear slowed-down in a regular player.
+ * This is expected. TikTok's re-encoder corrects the timing during upload.
+ */
+function applyItsscale(moovU8, scaleFactor) {
+  if (!scaleFactor || scaleFactor <= 1) return;
+  const dv = new DataView(moovU8.buffer, moovU8.byteOffset, moovU8.byteLength);
+
+  // --- 1. Scale mvhd duration ---
+  const mvhd = findBoxes(moovU8, 8, moovU8.length, 'mvhd')[0];
+  if (mvhd) {
+    const ver = dv.getUint8(mvhd.contentStart);
+    if (ver === 1) {
+      const durOff = mvhd.contentStart + 24;
+      if (durOff + 8 <= moovU8.length) {
+        const hi = dv.getUint32(durOff);
+        const lo = dv.getUint32(durOff + 4);
+        const nd = Math.round((hi * 4294967296 + lo) * scaleFactor);
+        dv.setUint32(durOff, Math.floor(nd / 4294967296));
+        dv.setUint32(durOff + 4, nd >>> 0);
+      }
+    } else {
+      const durOff = mvhd.contentStart + 16;
+      if (durOff + 4 <= moovU8.length) {
+        dv.setUint32(durOff, Math.round(dv.getUint32(durOff) * scaleFactor));
+      }
+    }
+  }
+
+  // --- 2. Scale per-track timing ---
+  const traks = findBoxes(moovU8, 8, moovU8.length, 'trak');
+  for (const trak of traks) {
+    // 2a. tkhd duration (in mvhd timescale units)
+    const tkhd = findBoxes(moovU8, trak.contentStart, trak.boxEnd, 'tkhd')[0];
+    if (tkhd) {
+      const ver = dv.getUint8(tkhd.contentStart);
+      if (ver === 1) {
+        const durOff = tkhd.contentStart + 28;
+        if (durOff + 8 <= moovU8.length) {
+          const hi = dv.getUint32(durOff);
+          const lo = dv.getUint32(durOff + 4);
+          const nd = Math.round((hi * 4294967296 + lo) * scaleFactor);
+          dv.setUint32(durOff, Math.floor(nd / 4294967296));
+          dv.setUint32(durOff + 4, nd >>> 0);
+        }
+      } else {
+        const durOff = tkhd.contentStart + 20;
+        if (durOff + 4 <= moovU8.length) {
+          dv.setUint32(durOff, Math.round(dv.getUint32(durOff) * scaleFactor));
+        }
+      }
+    }
+
+    const mdia = findBoxes(moovU8, trak.contentStart, trak.boxEnd, 'mdia')[0];
+    if (!mdia) continue;
+
+    // 2b. mdhd duration (in mdhd timescale units)
+    const mdhd = findBoxes(moovU8, mdia.contentStart, mdia.boxEnd, 'mdhd')[0];
+    if (mdhd) {
+      const ver = dv.getUint8(mdhd.contentStart);
+      if (ver === 1) {
+        const durOff = mdhd.contentStart + 24;
+        if (durOff + 8 <= moovU8.length) {
+          const hi = dv.getUint32(durOff);
+          const lo = dv.getUint32(durOff + 4);
+          const nd = Math.round((hi * 4294967296 + lo) * scaleFactor);
+          dv.setUint32(durOff, Math.floor(nd / 4294967296));
+          dv.setUint32(durOff + 4, nd >>> 0);
+        }
+      } else {
+        const durOff = mdhd.contentStart + 16;
+        if (durOff + 4 <= moovU8.length) {
+          dv.setUint32(durOff, Math.round(dv.getUint32(durOff) * scaleFactor));
+        }
+      }
+    }
+
+    // 2c. stts sample deltas + ctts composition offsets
+    const minf = findBoxes(moovU8, mdia.contentStart, mdia.boxEnd, 'minf')[0];
+    if (minf) {
+      const stbl = findBoxes(moovU8, minf.contentStart, minf.boxEnd, 'stbl')[0];
+      if (stbl) {
+        const stts = findBoxes(moovU8, stbl.contentStart, stbl.boxEnd, 'stts')[0];
+        if (stts) {
+          const count = dv.getUint32(stts.contentStart + 4);
+          for (let i = 0; i < count; i++) {
+            const dOff = stts.contentStart + 8 + i * 8 + 4;
+            if (dOff + 4 <= moovU8.length) {
+              dv.setUint32(dOff, Math.round(dv.getUint32(dOff) * scaleFactor));
+            }
+          }
+        }
+
+        const ctts = findBoxes(moovU8, stbl.contentStart, stbl.boxEnd, 'ctts')[0];
+        if (ctts) {
+          const ver = dv.getUint8(ctts.contentStart);
+          const count = dv.getUint32(ctts.contentStart + 4);
+          for (let i = 0; i < count; i++) {
+            const oOff = ctts.contentStart + 8 + i * 8 + 4;
+            if (oOff + 4 <= moovU8.length) {
+              if (ver === 0) {
+                dv.setUint32(oOff, Math.round(dv.getUint32(oOff) * scaleFactor));
+              } else {
+                dv.setInt32(oOff, Math.round(dv.getInt32(oOff) * scaleFactor));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 2d. elst (edit list) entries
+    const edts = findBoxes(moovU8, trak.contentStart, trak.boxEnd, 'edts')[0];
+    if (edts) {
+      const elst = findBoxes(moovU8, edts.contentStart, edts.boxEnd, 'elst')[0];
+      if (elst) {
+        const ver = dv.getUint8(elst.contentStart);
+        const count = dv.getUint32(elst.contentStart + 4);
+        for (let i = 0; i < count; i++) {
+          if (ver === 1) {
+            const eo = elst.contentStart + 8 + i * 20;
+            if (eo + 20 <= moovU8.length) {
+              const sd = dv.getUint32(eo) * 4294967296 + dv.getUint32(eo + 4);
+              const nsd = Math.round(sd * scaleFactor);
+              dv.setUint32(eo, Math.floor(nsd / 4294967296));
+              dv.setUint32(eo + 4, nsd >>> 0);
+              const mtHi = dv.getInt32(eo + 8);
+              if (!(mtHi === -1)) {
+                const mt = mtHi * 4294967296 + dv.getUint32(eo + 12);
+                const nmt = Math.round(mt * scaleFactor);
+                dv.setUint32(eo + 8, Math.floor(nmt / 4294967296));
+                dv.setUint32(eo + 12, nmt >>> 0);
+              }
+            }
+          } else {
+            const eo = elst.contentStart + 8 + i * 12;
+            if (eo + 12 <= moovU8.length) {
+              dv.setUint32(eo, Math.round(dv.getUint32(eo) * scaleFactor));
+              const mt = dv.getInt32(eo + 4);
+              if (mt >= 0) {
+                dv.setInt32(eo + 4, Math.round(mt * scaleFactor));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
  * Adjusts all 32-bit (stco) and 64-bit (co64) chunk offsets by traversing
  * the MP4 hierarchy: moov -> trak -> mdia -> minf -> stbl -> (stco | co64).
- * This eliminates false-positive byte matches and avoids corrupting media headers.
  */
 function updateChunkOffsets(moovU8, shift) {
   if (shift === 0) return;
@@ -434,7 +598,17 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
   const moovDv = new DataView(mergedMoov.buffer);
   moovDv.setUint32(0, mergedMoov.length);
 
-  onProgress && onProgress({ percent: 60, stage: 'Kadr ofsetləri (stco/co64) dəqiqləşdirilir...' });
+  onProgress && onProgress({ percent: 50, stage: 'Itsscale vaxt miqyası tətbiq edilir...' });
+
+  // Apply itsscale ×2 for the TikTok Studio HQ method.
+  // This is the technique used by Upload120 / Void Studio / Compressbase.
+  // It changes how TikTok's quality classifier reads the file.
+  const preset = options.preset || 'studio';
+  if (preset === 'studio') {
+    applyItsscale(mergedMoov, 2);
+  }
+
+  onProgress && onProgress({ percent: 65, stage: 'Kadr ofsetləri (stco/co64) dəqiqləşdirilir...' });
 
   // FastStart Layout Calculation:
   // Final file layout: [ftyp] -> [moov] -> [mdat] -> [other trailing boxes]
