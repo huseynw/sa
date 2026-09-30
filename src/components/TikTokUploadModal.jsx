@@ -39,10 +39,20 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
 
   const handleFileSelect = (selectedFile) => {
     if (!selectedFile) return;
-    if (!selectedFile.name.toLowerCase().endsWith('.mp4') && !selectedFile.type.includes('video')) {
-      setError(t('tt_modal_err_mp4_only', 'Zəhmət olmasa yalnız MP4 video faylı seçin.'));
+
+    // Detect if the file is a video (handles iOS Safari Photos picker quirks where type can be empty or video/quicktime)
+    const name = (selectedFile.name || '').toLowerCase();
+    const type = (selectedFile.type || '').toLowerCase();
+    const isVideoExt = /\.(mp4|mov|m4v|qt|webm|mkv|avi|3gp)$/i.test(name);
+    const isVideoMime = type.startsWith('video/') || type.includes('quicktime');
+    const isLikelyVideo = isVideoMime || isVideoExt || (type === '' && selectedFile.size > 0) || type === 'application/octet-stream';
+    const isImage = type.startsWith('image/') && !type.includes('quicktime');
+
+    if (isImage || !isLikelyVideo) {
+      setError(t('tt_modal_err_mp4_only', 'Zəhmət olmasa video faylı seçin (MP4 / MOV).'));
       return;
     }
+
     setError('');
     setResult(null);
     setFile(selectedFile);
@@ -61,11 +71,23 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
         setMetaLoading(false);
       });
 
-    // 2. HTML5 video metadata probe fallback
+    // 2. HTML5 video metadata probe fallback (iOS Safari safe)
     try {
       const url = URL.createObjectURL(selectedFile);
       const v = document.createElement('video');
       v.preload = 'metadata';
+      v.muted = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.setAttribute('webkit-playsinline', '');
+
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        try { URL.revokeObjectURL(url); } catch {}
+      };
+
       v.onloadedmetadata = () => {
         setMeta((prev) => ({
           ...prev,
@@ -73,11 +95,24 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
           height: prev?.height || v.videoHeight,
           duration: prev?.duration || Math.round(v.duration * 10) / 10,
         }));
-        URL.revokeObjectURL(url);
+        setMetaLoading(false);
+        cleanup();
       };
-      v.onerror = () => URL.revokeObjectURL(url);
+      v.onerror = () => {
+        setMetaLoading(false);
+        cleanup();
+      };
       v.src = url;
-    } catch {}
+      v.load();
+
+      // Fallback timeout to ensure spinner never stays stuck on iOS
+      setTimeout(() => {
+        setMetaLoading(false);
+        cleanup();
+      }, 3000);
+    } catch {
+      setMetaLoading(false);
+    }
   };
 
   const handleDrop = (e) => {
@@ -226,25 +261,38 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
 
                 {/* Dropzone */}
                 {!file ? (
-                  <div
-                    className={`tt-dropzone ${isDragging ? 'dragover' : ''}`}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="video/mp4,video/*"
-                      style={{ display: 'none' }}
-                      onChange={(e) => handleFileSelect(e.target.files?.[0])}
-                    />
-                    <div className="tt-dropzone-icon">
-                      <i className="fa-solid fa-cloud-arrow-up" />
+                  <div className="tt-dropzone-wrapper">
+                    {error && (
+                      <div className="tt-error-box" style={{ marginBottom: '14px' }}>
+                        <i className="fa-solid fa-triangle-exclamation" />
+                        <span>{error}</span>
+                      </div>
+                    )}
+                    <div
+                      className={`tt-dropzone ${isDragging ? 'dragover' : ''}`}
+                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="video/*,video/mp4,video/quicktime,.mp4,.mov,.m4v"
+                        className="tt-file-input-overlay"
+                        onClick={(e) => { e.target.value = ''; }}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = '';
+                          if (f) handleFileSelect(f);
+                        }}
+                      />
+                      <div className="tt-dropzone-icon">
+                        <i className="fa-solid fa-cloud-arrow-up" />
+                      </div>
+                      <h4>{t('tt_drop_title', 'MP4 Videonuzu Bura Atın')}</h4>
+                      <p>{t('tt_drop_hint', 'və ya cihazdan fayl seçmək üçün klikləyin')}</p>
                     </div>
-                    <h4>{t('tt_drop_title', 'MP4 Videonuzu Bura Atın')}</h4>
-                    <p>{t('tt_drop_hint', 'və ya cihazdan fayl seçmək üçün klikləyin')}</p>
                   </div>
                 ) : (
                   <div className="tt-file-selected-box">

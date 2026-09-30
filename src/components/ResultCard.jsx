@@ -643,15 +643,13 @@ const TikTokVideoTab = ({ muted, setMuted, downloading, onDownload, btnCls }) =>
       <i className="fa-solid fa-circle-check" />
       {t('tt_gallery_compatible')}
     </div>
-    <div className="action-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-      <button className={`btn ${btnCls}`} disabled={downloading}
-        onClick={() => onDownload({ quality: 'hd', isMuted: muted, audioOnly: false })}
-        style={{ flex: '1 1 180px' }}>
+    <div className="action-row tt-action-row">
+      <button className={`btn ${btnCls} btn-tt-action btn-tt-hd`} disabled={downloading}
+        onClick={() => onDownload({ quality: 'hd', isMuted: muted, audioOnly: false })}>
         {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-circle-play" /> {muted ? t('btn_hd_muted') : t('btn_hd_video')}</>}
       </button>
-      <button className="btn btn-ghost" disabled={downloading}
-        onClick={() => onDownload({ quality: 'sd', isMuted: muted, audioOnly: false })}
-        style={{ flex: '1 1 140px' }}>
+      <button className="btn btn-ghost btn-tt-action btn-tt-sd" disabled={downloading}
+        onClick={() => onDownload({ quality: 'sd', isMuted: muted, audioOnly: false })}>
         <i className="fa-solid fa-video" /> {muted ? t('btn_sd_muted') : t('btn_sd_video')}
       </button>
     </div>

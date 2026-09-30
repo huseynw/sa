@@ -483,7 +483,7 @@ function replaceChildBox(bytes, parent, targetStart, replacement) {
 
 function rebuildTrack(bytes, track, context, keepEdts) {
   if (!track.stbl || !track.minf || !track.mdia) {
-    throw new Error('Track sample strukturu natamamdır.');
+    return rawBox(bytes, track.trak);
   }
   const stbl = patchTrackStbl(bytes, track.stbl, context);
   const minf = replaceChildBox(bytes, track.minf, track.stbl.start, stbl);
@@ -858,6 +858,30 @@ function rebuildMoov(bytes, analysis, context, audioPlan, options) {
   return makeBox('moov', concat(parts));
 }
 
+function ensureMp4Ftyp(bytes, ftypBox) {
+  if (!ftypBox) {
+    const payload = new Uint8Array([
+      0x6d, 0x70, 0x34, 0x32, // 'mp42'
+      0x00, 0x00, 0x00, 0x00, // minor_version = 0
+      0x6d, 0x70, 0x34, 0x32, // 'mp42'
+      0x69, 0x73, 0x6f, 0x6d, // 'isom'
+    ]);
+    return makeBox('ftyp', payload);
+  }
+  const brand = readType(bytes, ftypBox.payloadStart);
+  if (brand === 'qt  ') {
+    const payload = new Uint8Array([
+      0x6d, 0x70, 0x34, 0x32, // 'mp42'
+      0x00, 0x00, 0x00, 0x00, // minor_version = 0
+      0x6d, 0x70, 0x34, 0x32, // 'mp42'
+      0x69, 0x73, 0x6f, 0x6d, // 'isom'
+      0x71, 0x74, 0x20, 0x20, // 'qt  '
+    ]);
+    return makeBox('ftyp', payload);
+  }
+  return rawBox(bytes, ftypBox);
+}
+
 // --- Public API ---
 
 /**
@@ -865,9 +889,15 @@ function rebuildMoov(bytes, analysis, context, audioPlan, options) {
  */
 export async function probeMp4Metadata(fileOrBlob) {
   try {
-    const slice = fileOrBlob.slice(0, Math.min(fileOrBlob.size, 1024 * 1024 * 4));
-    const ab = await slice.arrayBuffer();
-    const bytes = new Uint8Array(ab);
+    let bytes;
+    if (fileOrBlob.size <= 25 * 1024 * 1024) {
+      const ab = await fileOrBlob.arrayBuffer();
+      bytes = new Uint8Array(ab);
+    } else {
+      const slice = fileOrBlob.slice(0, Math.min(fileOrBlob.size, 1024 * 1024 * 6));
+      const ab = await slice.arrayBuffer();
+      bytes = new Uint8Array(ab);
+    }
     const analysis = inspectMp4(bytes);
     return {
       width: analysis.videoTrack?.width || 0,
@@ -924,7 +954,7 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
   const oldMdatPayloadStart = analysis.mdat.payloadStart;
   const oldMdatPayloadEnd = analysis.mdat.payloadEnd;
   const oldMdatPayloadLength = oldMdatPayloadEnd - oldMdatPayloadStart;
-  const prefix = analysis.ftyp ? rawBox(bytes, analysis.ftyp) : new Uint8Array(0);
+  const prefix = ensureMp4Ftyp(bytes, analysis.ftyp);
 
   onProgress && onProgress({ percent: 60, stage: 'FastStart moov konteyneri hesablanır...' });
 
