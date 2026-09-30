@@ -1,8 +1,8 @@
 /**
  * mp4Patcher.js
- * In-browser binary MP4 patcher implementing the ParsMazi 120 FPS TikTok Studio Method.
+ * In-browser binary MP4 patcher implementing the HUSEVN 120 FPS TikTok Studio Method.
+ * (husevndownloader.netlify.app)
  * 
- * Based directly on the reverse-engineered and verified ParsMazi engine (parsmazi.com):
  * 1. ZERO frame / duration cutting: Video samples, bitstream, resolution, and native
  *    framerate (60 FPS / 120 FPS) are 100% PRESERVED. The video track is completely untouched.
  * 2. Audio Table Inflation (The Core Method):
@@ -383,7 +383,7 @@ export function inspectMp4(bytes) {
   };
 }
 
-// --- ParsMazi Method Builders ---
+// --- 120 FPS Method Builders ---
 
 function makeStsz(bytes, original, sampleSizes, injectedCount) {
   const total = sampleSizes.length + injectedCount;
@@ -670,7 +670,7 @@ export function buildUdtaBox(encoder = ENCODER_TAG, comment = COMMENT_TAG) {
 }
 
 /**
- * Creates a synthetic silent AAC audio track to ensure the ParsMazi method
+ * Creates a synthetic silent AAC audio track to ensure the 120 FPS method
  * can be applied even if the uploaded video has no audio track.
  */
 function createSyntheticAudioTrack(bytes, videoTrack, trackId) {
@@ -887,7 +887,7 @@ export async function probeMp4Metadata(fileOrBlob) {
 
 /**
  * Main patch function.
- * Implements the verified ParsMazi 120 FPS TikTok Studio Method.
+ * Implements the HUSEVN 120 FPS TikTok Studio Method.
  * 
  * Preserves 100% video quality, 0 frame drops, 0 video truncations,
  * maintains native 60/120 FPS, and inflates audio tables to trigger
@@ -913,11 +913,11 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
     analysis.tracks.push(analysis.audioTrack);
   }
 
-  const preset = options.preset || 'parsmazi'; // 'parsmazi' (default) | 'faststart'
+  const preset = options.preset || 'husevn'; // 'husevn' (default) | 'faststart'
   let audioPlan = null;
 
-  if (preset === 'parsmazi') {
-    onProgress && onProgress({ percent: 45, stage: 'ParsMazi 120 FPS Method cədvəli qurulur...' });
+  if (preset === 'husevn' || preset === 'parsmazi' || preset === 'studio') {
+    onProgress && onProgress({ percent: 45, stage: '120 FPS Method cədvəli qurulur...' });
     audioPlan = makeAudioPatchPlan(bytes, analysis, MULTIPLIER);
   }
 
@@ -955,7 +955,7 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
     throw new Error('Daxili xəta: Konteyner ölçüsü dəyişdi.');
   }
 
-  // Prepare dummy payload for ParsMazi method
+  // Prepare dummy payload for 120 FPS method
   let dummyPayload = new Uint8Array(0);
   if (audioPlan && audioPlan.injectedCount > 0) {
     dummyPayload = new Uint8Array(audioPlan.injectedCount * METHOD_SAMPLE.length);
@@ -964,7 +964,7 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
     }
   }
 
-  onProgress && onProgress({ percent: 90, stage: 'Yeni ParsMazi Method MP4 faylı qurulur...' });
+  onProgress && onProgress({ percent: 90, stage: 'Yeni 120 FPS Method MP4 faylı qurulur...' });
 
   // Assembly: [prefix/ftyp] -> [moov] -> [mdat header: 8b] -> [original mdat payload] -> [dummy payload]
   const mdatSize = 8 + oldMdatPayloadLength;
@@ -994,7 +994,7 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
   const outBlob = new Blob([output], { type: 'video/mp4' });
   const originalName = fileOrBlob.name || 'video';
   const cleanBaseName = originalName.replace(/\.[^/.]+$/, '');
-  const outName = `${cleanBaseName}_parsmazi_husevndownloader.mp4`;
+  const outName = `${cleanBaseName}_husevndownloader.mp4`;
 
   return {
     blob: outBlob,

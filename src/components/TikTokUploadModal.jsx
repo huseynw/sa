@@ -11,7 +11,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
   const [file, setFile] = useState(null);
   const [meta, setMeta] = useState(null);
   const [metaLoading, setMetaLoading] = useState(false);
-  const [preset, setPreset] = useState('parsmazi'); // 'parsmazi' | 'faststart'
+  const [preset, setPreset] = useState('husevn'); // 'husevn' | 'faststart'
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ percent: 0, stage: '' });
   const [result, setResult] = useState(null);
@@ -138,7 +138,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <h3>{t('tt_modal_title', 'TikTok Studio Upload Metodu')}</h3>
                 </div>
                 <p className="shortcut-subtitle">
-                  {t('tt_modal_sub', 'ParsMazi 120 FPS Method & FastStart Optimizer')}
+                  {t('tt_modal_sub', 'HUSEVN 120 FPS Method & FastStart Optimizer')}
                 </p>
               </div>
             </div>
@@ -179,7 +179,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <p className="shortcut-desc">
                   {t(
                     'tt_modal_patcher_desc',
-                    'ParsMazi (parsmazi.com) 120 FPS metodunu birbaşa cihazınızda tətbiq edir. Video kadrlarına və sürətinə toxunmur, audio sample cədvəli və mvhd optimizasiyası ilə TikTok-un yüksək keyfiyyət kanalını işə salır.'
+                    'HUSEVN 120 FPS metodunu (husevndownloader.netlify.app) birbaşa cihazınızda tətbiq edir. Video kadrlarına və sürətinə toxunmur, audio sample cədvəli və mvhd optimizasiyası ilə TikTok-un ən yüksək keyfiyyət kanalını işə salır.'
                   )}
                 </p>
 
@@ -289,17 +289,17 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       <label className="tt-preset-label">{t('tt_select_preset', 'Yüklənmə Metodu Rejimi:')}</label>
                       <div className="tt-preset-grid two-col">
                         <div
-                          className={`tt-preset-card ${preset === 'parsmazi' ? 'active' : ''}`}
-                          onClick={() => !processing && setPreset('parsmazi')}
+                          className={`tt-preset-card ${preset === 'husevn' || preset === 'parsmazi' ? 'active' : ''}`}
+                          onClick={() => !processing && setPreset('husevn')}
                         >
                           <div className="tt-preset-header">
                             <span className="tt-preset-badge">120 FPS</span>
-                            <span className="tt-preset-title">{t('tt_preset_parsmazi_title', 'ParsMazi 120 FPS Method (Tövsiyə olunur)')}</span>
+                            <span className="tt-preset-title">{t('tt_preset_husevn_title', 'HUSEVN 120 FPS Method (Tövsiyə olunur)')}</span>
                           </div>
                           <p className="tt-preset-desc">
                             {t(
-                              'tt_preset_parsmazi_desc',
-                              'ParsMazi metodu: Video kadrları və 60/120 FPS axıcılığı 100% toxunulmaz qalır (kəsilmə və ya yavaşlama olmur). Audio sample cədvəli 10× genişləndirilir və mvhd naməlum edilir ki, TikTok videonu sıxmadan ən yüksək keyfiyyətlə emal etsin.'
+                              'tt_preset_husevn_desc',
+                              'HUSEVN metodu (husevndownloader.netlify.app): Video kadrları və 60/120 FPS axıcılığı 100% toxunulmaz qalır (kəsilmə və ya yavaşlama olmur). Audio sample cədvəli 10× genişləndirilir və mvhd naməlum edilir ki, TikTok videonu sıxmadan ən yüksək keyfiyyətlə emal etsin.'
                             )}
                           </p>
                         </div>
@@ -319,26 +319,6 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                             )}
                           </p>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Tag preview box */}
-                    <div className="tt-tag-preview-box">
-                      <div className="tt-tag-row">
-                        <span className="tt-tag-key"><i className="fa-solid fa-code" /> Encoder Tag:</span>
-                        <span className="tt-tag-val">husevndownloader.netlify.app</span>
-                      </div>
-                      <div className="tt-tag-row">
-                        <span className="tt-tag-key"><i className="fa-solid fa-tag" /> Method:</span>
-                        <span className="tt-tag-val">Patched by husevndownloader.netlify.app</span>
-                      </div>
-                      <div className="tt-tag-row">
-                        <span className="tt-tag-key"><i className="fa-solid fa-film" /> Kadrlar & Müddət:</span>
-                        <span className="tt-tag-val text-green">100% Toxunulmaz (Kəsilməsiz)</span>
-                      </div>
-                      <div className="tt-tag-row">
-                        <span className="tt-tag-key"><i className="fa-solid fa-bolt" /> FastStart:</span>
-                        <span className="tt-tag-val text-cyan">Aktiv (moov atomu başda)</span>
                       </div>
                     </div>
 
