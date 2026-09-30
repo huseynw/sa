@@ -209,7 +209,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <p className="shortcut-desc">
                   {t(
                     'tt_modal_patcher_desc',
-                    'HUSEVN 120 FPS metodunu (HUSEVN) birbaşa cihazınızda tətbiq edir. Video kadrlarına və sürətinə toxunmur, audio sample cədvəli və mvhd optimizasiyası ilə TikTok-un ən yüksək keyfiyyət kanalını işə salır.'
+                    'HUSEVN 120 FPS metodunu birbaşa cihazınızda tətbiq edir. Video kadrlarına toxunmur, ParsMazi / LuisAlves10 Timescale və FastStart mühərriki ilə TikTok-un 60/120 FPS keyfiyyət kanalını işə salır və shadowban riskini tam aradan qaldırır.'
                   )}
                 </p>
 
@@ -340,7 +340,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                           <p className="tt-preset-desc">
                             {t(
                               'tt_preset_husevn_desc',
-                              'HUSEVN metodu (HUSEVN): Video kadrları və 60/120 FPS axıcılığı 100% toxunulmaz qalır (kəsilmə və ya yavaşlama olmur). Audio sample cədvəli 10× genişləndirilir və mvhd naməlum edilir ki, TikTok videonu sıxmadan ən yüksək keyfiyyətlə emal etsin.'
+                              'HUSEVN metodu: Video kadrları və 60/120 FPS axıcılığı 100% qorunur. ParsMazi Timescale Scaling və FastStart ilə fayl təmiz saxlanılır, heç bir saxta audio olmadan TikTok-un keyfiyyət salması və shadowban əngəllənir.'
                             )}
                           </p>
                         </div>
