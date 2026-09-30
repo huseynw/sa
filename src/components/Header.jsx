@@ -53,7 +53,7 @@ const Header = ({ onOpenUploadMethod }) => {
             type="button"
             onClick={handleOpenUploadMethod}
             className="btn-tt-method-header"
-            title="TikTok Studio Upload Metodu (60/120 FPS Anti-Compression)"
+            title="TikTok Studio Upload Metodu (60/120 FPS)"
           >
             <i className="fa-brands fa-tiktok" />
             <span>{t('tt_upload_method_btn', 'TikTok Metod')}</span>

@@ -5,7 +5,7 @@ import { patchMp4, ENCODER_TAG, COMMENT_TAG } from '../utils/mp4Patcher';
 
 export default function TikTokUploadModal({ isOpen, onClose }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('patcher'); // 'patcher' | 'ffmpeg' | 'guide'
+  const [activeTab, setActiveTab] = useState('patcher'); // 'patcher' | 'guide'
 
   // Patcher states
   const [file, setFile] = useState(null);
@@ -16,9 +16,6 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
   const [error, setError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
-
-  // FFmpeg copy state
-  const [copiedKey, setCopiedKey] = useState(null);
 
   if (!isOpen) return null;
 
@@ -78,24 +75,11 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
     }
   };
 
-  const handleCopyCommand = (key, text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey(null), 2500);
-    }).catch(() => {});
-  };
-
   const formatSize = (bytes) => {
     if (!bytes && bytes !== 0) return '0 B';
     const mb = bytes / (1024 * 1024);
     if (mb >= 1) return `${mb.toFixed(2)} MB`;
     return `${(bytes / 1024).toFixed(1)} KB`;
-  };
-
-  const FFMPEG_CMDS = {
-    '60fps': `ffmpeg -itsscale 2 -i "input.mp4" -c:v copy -c:a copy -movflags +faststart -metadata comment="Patched by husevndownloader.netlify.app" -metadata encoder="husevndownloader.netlify.app" "output_60fps.mp4"`,
-    '120fps': `ffmpeg -itsscale 6 -i "input.mp4" -c:v copy -c:a copy -movflags +faststart -metadata comment="Patched by husevndownloader.netlify.app" -metadata encoder="husevndownloader.netlify.app" "output_120fps.mp4"`,
-    'clean': `ffmpeg -i "input.mp4" -c:v copy -c:a copy -movflags +faststart -metadata comment="Patched by husevndownloader.netlify.app" -metadata encoder="husevndownloader.netlify.app" "output_faststart.mp4"`,
   };
 
   return (
@@ -118,7 +102,6 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
               <div>
                 <div className="tt-modal-title-row">
                   <h3>{t('tt_modal_title', 'TikTok Studio Upload Metodu')}</h3>
-                  <span className="tt-method-pill">Anti-Compression</span>
                 </div>
                 <p className="shortcut-subtitle">
                   {t('tt_modal_sub', '60 / 120 FPS Bypass & FastStart Optimizer')}
@@ -147,14 +130,6 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
             </button>
             <button
               type="button"
-              className={`tt-tab-btn ${activeTab === 'ffmpeg' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ffmpeg')}
-            >
-              <i className="fa-solid fa-terminal" />
-              <span>{t('tt_tab_ffmpeg', 'FFmpeg Komandaları')}</span>
-            </button>
-            <button
-              type="button"
               className={`tt-tab-btn ${activeTab === 'guide' ? 'active' : ''}`}
               onClick={() => setActiveTab('guide')}
             >
@@ -170,7 +145,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <p className="shortcut-desc">
                   {t(
                     'tt_modal_patcher_desc',
-                    'Faylınızı serverə göndərmədən, 100% brauzerinizdə dərhal FastStart containerə keçirir və husevndownloader.netlify.app encoder teqi ilə TikTok Studio üçün hazır edir.'
+                    'Faylınızı birbaşa brauzerinizdə dərhal FastStart containerə keçirir və husevndownloader.netlify.app encoder teqi ilə TikTok Studio üçün hazır edir.'
                   )}
                 </p>
 
@@ -194,11 +169,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       <i className="fa-solid fa-cloud-arrow-up" />
                     </div>
                     <h4>{t('tt_drop_title', 'MP4 Videonuzu Bura Atın')}</h4>
-                    <p>{t('tt_drop_hint', 'və ya kompüterdən fayl seçmək üçün klikləyin')}</p>
-                    <div className="tt-dropzone-meta">
-                      <span><i className="fa-solid fa-bolt" /> 0 MB Server Yükləməsi</span>
-                      <span><i className="fa-solid fa-lock" /> 100% Məxfi & Ani</span>
-                    </div>
+                    <p>{t('tt_drop_hint', 'və ya cihazdan fayl seçmək üçün klikləyin')}</p>
                   </div>
                 ) : (
                   <div className="tt-file-selected-box">
@@ -257,10 +228,10 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                         >
                           <div className="tt-preset-header">
                             <span className="tt-preset-badge green">FastStart</span>
-                            <span className="tt-preset-title">Lossless Anti-Compression</span>
+                            <span className="tt-preset-title">Lossless FastStart</span>
                           </div>
                           <p className="tt-preset-desc">
-                            {t('tt_preset_clean_desc', 'Kadrların vaxtına toxunmadan moov atomunu başa keçirir və encoder teqini daxil edir.')}
+                            {t('tt_preset_clean_desc', 'Kadrların vaxtına toxunmadan moov atomunu başa keçirir və husevndownloader encoder teqini daxil edir.')}
                           </p>
                         </div>
                       </div>
@@ -356,69 +327,41 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
               </div>
             )}
 
-            {/* TAB 2: FFMPEG COMMANDS */}
-            {activeTab === 'ffmpeg' && (
-              <div className="tt-ffmpeg-section">
-                <p className="shortcut-desc">
-                  {t(
-                    'tt_ffmpeg_desc',
-                    'PC-də After Effects, Premiere Pro və ya CapCut redaktorları üçün birbaşa FFmpeg komandaları. Bu komandalar videonu yenidən render etmədən (lossless stream copy) teqi daxil edir:'
-                  )}
-                </p>
-
-                {/* 60 FPS Command */}
-                <div className="tt-cmd-box">
-                  <div className="tt-cmd-header">
-                    <span className="tt-cmd-title">⚡ TikTok Studio 60 FPS (Tövsiyə olunur)</span>
-                    <button
-                      type="button"
-                      className="btn btn-cmd-copy"
-                      onClick={() => handleCopyCommand('60fps', FFMPEG_CMDS['60fps'])}
-                    >
-                      <i className={`fa-solid ${copiedKey === '60fps' ? 'fa-check text-green' : 'fa-copy'}`} />
-                      <span>{copiedKey === '60fps' ? t('copied', 'Kopyalandı!') : t('copy', 'Kopyala')}</span>
-                    </button>
-                  </div>
-                  <pre className="tt-cmd-code"><code>{FFMPEG_CMDS['60fps']}</code></pre>
-                </div>
-
-                {/* 120 FPS Command */}
-                <div className="tt-cmd-box">
-                  <div className="tt-cmd-header">
-                    <span className="tt-cmd-title">🚀 TikTok Studio 120 FPS (Ultra-smooth)</span>
-                    <button
-                      type="button"
-                      className="btn btn-cmd-copy"
-                      onClick={() => handleCopyCommand('120fps', FFMPEG_CMDS['120fps'])}
-                    >
-                      <i className={`fa-solid ${copiedKey === '120fps' ? 'fa-check text-green' : 'fa-copy'}`} />
-                      <span>{copiedKey === '120fps' ? t('copied', 'Kopyalandı!') : t('copy', 'Kopyala')}</span>
-                    </button>
-                  </div>
-                  <pre className="tt-cmd-code"><code>{FFMPEG_CMDS['120fps']}</code></pre>
-                </div>
-
-                {/* Lossless FastStart */}
-                <div className="tt-cmd-box">
-                  <div className="tt-cmd-header">
-                    <span className="tt-cmd-title">🛡️ Lossless Anti-Compression (Clean FastStart)</span>
-                    <button
-                      type="button"
-                      className="btn btn-cmd-copy"
-                      onClick={() => handleCopyCommand('clean', FFMPEG_CMDS['clean'])}
-                    >
-                      <i className={`fa-solid ${copiedKey === 'clean' ? 'fa-check text-green' : 'fa-copy'}`} />
-                      <span>{copiedKey === 'clean' ? t('copied', 'Kopyalandı!') : t('copy', 'Kopyala')}</span>
-                    </button>
-                  </div>
-                  <pre className="tt-cmd-code"><code>{FFMPEG_CMDS['clean']}</code></pre>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: GUIDE */}
+            {/* TAB 2: GUIDE WITH VERTICAL VIDEO CONTAINER */}
             {activeTab === 'guide' && (
               <div className="tt-guide-section">
+                {/* Vertical 9:16 Video Player Container for tuto.mp4 */}
+                <div className="tt-guide-video-wrapper">
+                  <div className="tt-vertical-video-box">
+                    <video
+                      src="/tuto.mp4"
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="tt-vertical-video-player"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const ph = e.currentTarget.parentElement?.querySelector('.tt-video-placeholder');
+                        if (ph) ph.style.display = 'flex';
+                      }}
+                      onLoadedData={(e) => {
+                        e.currentTarget.style.display = 'block';
+                        const ph = e.currentTarget.parentElement?.querySelector('.tt-video-placeholder');
+                        if (ph) ph.style.display = 'none';
+                      }}
+                    />
+                    <div className="tt-video-placeholder">
+                      <div className="tt-placeholder-icon">
+                        <i className="fa-solid fa-play" />
+                      </div>
+                      <span className="tt-placeholder-title">tuto.mp4</span>
+                      <span className="tt-placeholder-text">
+                        {t('tt_video_placeholder_hint', 'Video yükləndikdə avtomatik burada göstəriləcək')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="tt-guide-step">
                   <div className="tt-step-num">1</div>
                   <div className="tt-step-content">
@@ -440,7 +383,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <div className="tt-step-content">
                     <h4>{t('tt_step2_title', 'Metod ilə Videonu Patch Edin')}</h4>
                     <p>
-                      Export olunmuş videonu saytımızın <strong>Brauzerdə Hazırla</strong> bölməsinə atın və ya FFmpeg komandasını işə salın. Bu zaman fayl FastStart containerə çevrilir və <code>husevndownloader.netlify.app</code> encoder metadatası əlavə olunur.
+                      Export olunmuş videonu saytımızın <strong>Brauzerdə Hazırla</strong> bölməsinə atın. Bu zaman fayl FastStart containerə çevrilir və <code>husevndownloader.netlify.app</code> encoder metadatası əlavə olunur.
                     </p>
                   </div>
                 </div>

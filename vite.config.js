@@ -35,8 +35,22 @@ function lyricsDevPlugin() {
   };
 }
 
+function tutoVideoPlugin() {
+  return {
+    name: 'tuto-video-sync',
+    async buildStart() {
+      const fs = await import('fs');
+      if (fs.existsSync('tuto.mp4') && !fs.existsSync('public/tuto.mp4')) {
+        try {
+          fs.copyFileSync('tuto.mp4', 'public/tuto.mp4');
+        } catch {}
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), lyricsDevPlugin()],
+  plugins: [react(), lyricsDevPlugin(), tutoVideoPlugin()],
   build: {
     sourcemap: false,
     minify: 'terser',
