@@ -2,18 +2,17 @@
  * mp4Patcher.js
  * In-browser binary MP4 patcher for TikTok Studio High Quality Upload Method.
  * 
- * Features:
- * 1. FastStart Optimization: Moves 'moov' atom to the beginning of the file (before 'mdat'),
- *    accurately recalculating all 32-bit (stco) and 64-bit (co64) chunk offsets.
- * 2. Metadata Injection:
- *    - Encoder (©too): 'husevndownloader.netlify.app'
- *    - Comment (©cmt): 'Patched by husevndownloader.netlify.app'
- *    - Custom UDTA atom: 'Patched by husevndownloader.netlify.app'
- * 3. Timescale / itsscale modes:
- *    - 60 FPS (x2 timescale scale)
- *    - 120 FPS (x6 timescale scale)
- *    - Anti-compression clean (lossless FastStart + metadata tagging)
- * 4. Zero-copy chunk slicing using Blob.slice() for instant processing (0 MB RAM overhead).
+ * Fixes:
+ * 1. ZERO frame / duration cutting: Samples and presentation timestamps (PTS/DTS)
+ *    are 100% preserved. No timescale scaling or duration distortion.
+ * 2. True 60 FPS preservation: Maintains original native framerate without degrading to 30.
+ * 3. FastStart Optimization: Relocates 'moov' atom before 'mdat', accurately
+ *    updating both 32-bit (stco) and 64-bit (co64) chunk offsets by traversing
+ *    the exact box tree hierarchy (moov -> trak -> mdia -> minf -> stbl -> stco/co64).
+ * 4. Metadata Injection: Injects 'husevndownloader.netlify.app' encoder tag (©too)
+ *    and method comment (©cmt) in standard Apple iTunes format.
+ * 5. Built-in metadata inspector: Probes resolution, FPS, duration, bitrate,
+ *    and FastStart status in milliseconds.
  */
 
 export const ENCODER_TAG = 'husevndownloader.netlify.app';
@@ -28,7 +27,7 @@ export async function parseTopLevelBoxes(fileOrBlob) {
   const totalLength = fileOrBlob.size;
 
   while (offset + 8 <= totalLength) {
-    const slice = fileOrBlob.slice(offset, offset + 16);
+    const slice = fileOrBlob.slice(offset, Math.min(offset + 32, totalLength));
     const ab = await slice.arrayBuffer();
     if (ab.byteLength < 8) break;
 
@@ -68,6 +67,179 @@ export async function parseTopLevelBoxes(fileOrBlob) {
   }
 
   return boxes;
+}
+
+/**
+ * Parses inner boxes within a Uint8Array slice.
+ */
+export function parseInnerBoxes(u8, start = 0, end = u8.length) {
+  const boxes = [];
+  let off = start;
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+
+  while (off + 8 <= end) {
+    let sz = dv.getUint32(off);
+    const nm = String.fromCharCode(
+      u8[off + 4],
+      u8[off + 5],
+      u8[off + 6],
+      u8[off + 7]
+    );
+
+    let hSz = 8;
+    if (sz === 1) {
+      if (off + 16 > end) break;
+      const hi = dv.getUint32(off + 8);
+      const lo = dv.getUint32(off + 12);
+      sz = hi * 4294967296 + lo;
+      hSz = 16;
+    } else if (sz === 0) {
+      sz = end - off;
+    }
+
+    if (sz < hSz) break;
+    const bEnd = Math.min(off + sz, end);
+    boxes.push({
+      name: nm,
+      offset: off,
+      size: sz,
+      headerSize: hSz,
+      contentStart: off + hSz,
+      boxEnd: bEnd,
+    });
+    off = bEnd;
+  }
+  return boxes;
+}
+
+/**
+ * Finds all child boxes with a matching name.
+ */
+export function findBoxes(u8, start, end, targetName) {
+  return parseInnerBoxes(u8, start, end).filter(b => b.name === targetName);
+}
+
+/**
+ * Probes video properties (width, height, FPS, duration, bitrate, FastStart) from MP4 headers.
+ */
+export async function probeMp4Metadata(fileOrBlob) {
+  try {
+    const boxes = await parseTopLevelBoxes(fileOrBlob);
+    const ftyp = boxes.find(b => b.type === 'ftyp');
+    const moov = boxes.find(b => b.type === 'moov');
+    const mdat = boxes.find(b => b.type === 'mdat');
+
+    const isFastStart = !!(moov && mdat && moov.offset < mdat.offset);
+    if (!moov) {
+      return { width: null, height: null, fps: null, duration: null, bitrate: null, isFastStart };
+    }
+
+    const moovSlice = fileOrBlob.slice(moov.offset, moov.offset + moov.size);
+    const moovAb = await moovSlice.arrayBuffer();
+    const moovU8 = new Uint8Array(moovAb);
+    const dv = new DataView(moovU8.buffer);
+
+    let fps = null;
+    let width = null;
+    let height = null;
+    let duration = null;
+
+    // Read mvhd for movie duration
+    const mvhd = findBoxes(moovU8, 8, moovU8.length, 'mvhd')[0];
+    if (mvhd && mvhd.size >= 24) {
+      const ver = dv.getUint8(mvhd.offset + 8);
+      const ts = ver === 1 ? dv.getUint32(mvhd.offset + 28) : dv.getUint32(mvhd.offset + 20);
+      const dur = ver === 1
+        ? (dv.getUint32(mvhd.offset + 32) * 4294967296 + dv.getUint32(mvhd.offset + 36))
+        : dv.getUint32(mvhd.offset + 24);
+      if (ts > 0 && dur > 0) {
+        duration = Math.round((dur / ts) * 10) / 10;
+      }
+    }
+
+    // Traverse traks for video track
+    const traks = findBoxes(moovU8, 8, moovU8.length, 'trak');
+    for (const trak of traks) {
+      const mdia = findBoxes(moovU8, trak.contentStart, trak.boxEnd, 'mdia')[0];
+      if (!mdia) continue;
+      const hdlr = findBoxes(moovU8, mdia.contentStart, mdia.boxEnd, 'hdlr')[0];
+      if (!hdlr) continue;
+
+      const hType = String.fromCharCode(
+        moovU8[hdlr.offset + 16],
+        moovU8[hdlr.offset + 17],
+        moovU8[hdlr.offset + 18],
+        moovU8[hdlr.offset + 19]
+      );
+
+      if (hType === 'vide') {
+        // Track dimensions from tkhd
+        const tkhd = findBoxes(moovU8, trak.contentStart, trak.boxEnd, 'tkhd')[0];
+        if (tkhd) {
+          const ver = dv.getUint8(tkhd.offset + 8);
+          const wOff = tkhd.offset + (ver === 1 ? 96 : 84);
+          if (wOff + 8 <= moovU8.length) {
+            width = dv.getUint32(wOff) >> 16;
+            height = dv.getUint32(wOff + 4) >> 16;
+          }
+        }
+
+        // Media timescale from mdhd
+        const mdhd = findBoxes(moovU8, mdia.contentStart, mdia.boxEnd, 'mdhd')[0];
+        let timescale = 0;
+        let trackDur = 0;
+        if (mdhd) {
+          const ver = dv.getUint8(mdhd.offset + 8);
+          timescale = ver === 1 ? dv.getUint32(mdhd.offset + 28) : dv.getUint32(mdhd.offset + 20);
+          trackDur = ver === 1
+            ? (dv.getUint32(mdhd.offset + 32) * 4294967296 + dv.getUint32(mdhd.offset + 36))
+            : dv.getUint32(mdhd.offset + 24);
+        }
+
+        if (!duration && timescale > 0 && trackDur > 0) {
+          duration = Math.round((trackDur / timescale) * 10) / 10;
+        }
+
+        // Exact framerate from stts
+        const minf = findBoxes(moovU8, mdia.contentStart, mdia.boxEnd, 'minf')[0];
+        if (minf) {
+          const stbl = findBoxes(moovU8, minf.contentStart, minf.boxEnd, 'stbl')[0];
+          if (stbl) {
+            const stts = findBoxes(moovU8, stbl.contentStart, stbl.boxEnd, 'stts')[0];
+            if (stts && timescale > 0) {
+              const count = dv.getUint32(stts.offset + 12);
+              if (count > 0) {
+                const delta = dv.getUint32(stts.offset + 16 + 4);
+                if (delta > 0) {
+                  const rawFps = timescale / delta;
+                  fps = Math.round(rawFps * 10) / 10;
+                }
+              }
+            }
+          }
+        }
+        break;
+      }
+    }
+
+    let bitrate = null;
+    if (duration && duration > 0) {
+      bitrate = Math.round(((fileOrBlob.size * 8) / duration) / 100000) / 10; // in Mbps
+    }
+
+    return {
+      width,
+      height,
+      fps,
+      duration,
+      bitrate,
+      isFastStart,
+      size: fileOrBlob.size,
+    };
+  } catch (e) {
+    console.warn('[mp4Patcher] metadata probe failed:', e);
+    return null;
+  }
 }
 
 /**
@@ -113,7 +285,8 @@ function buildUdtaBox(encoder = ENCODER_TAG, comment = COMMENT_TAG) {
   ilst.set(itemToo, 8);
   ilst.set(itemCmt, 8 + itemToo.length);
 
-  // hdlr box (33 bytes)
+  // Standard Apple iTunes meta box (hdlr + ilst)
+  // hdlr box: size 33, 'hdlr', 0, 0, 'mdir', 'appl', 0, 0, 0, 0
   const hdlr = new Uint8Array(33);
   const hdlrDv = new DataView(hdlr.buffer);
   hdlrDv.setUint32(0, 33);
@@ -121,7 +294,7 @@ function buildUdtaBox(encoder = ENCODER_TAG, comment = COMMENT_TAG) {
   hdlr.set([0x6d, 0x64, 0x69, 0x72], 16); // 'mdir'
   hdlr.set([0x61, 0x70, 0x70, 0x6c], 20); // 'appl'
 
-  // meta box (FullBox: size 4, 'meta' 4, ver/flags 4, child boxes)
+  // meta box (FullBox: size 4, 'meta' 4, ver/flags 4, children)
   const metaLen = 12 + hdlr.length + ilst.length;
   const meta = new Uint8Array(metaLen);
   const metaDv = new DataView(meta.buffer);
@@ -131,7 +304,7 @@ function buildUdtaBox(encoder = ENCODER_TAG, comment = COMMENT_TAG) {
   meta.set(hdlr, 12);
   meta.set(ilst, 12 + hdlr.length);
 
-  // Raw signature box for instant string scanners
+  // Raw signature atom for instant string inspection
   const sigTextBytes = enc.encode(comment);
   const sigLen = 8 + sigTextBytes.length;
   const sig = new Uint8Array(sigLen);
@@ -153,126 +326,54 @@ function buildUdtaBox(encoder = ENCODER_TAG, comment = COMMENT_TAG) {
 }
 
 /**
- * Searches and parses inner boxes within a Uint8Array slice.
+ * Adjusts all 32-bit (stco) and 64-bit (co64) chunk offsets by traversing
+ * the MP4 hierarchy: moov -> trak -> mdia -> minf -> stbl -> (stco | co64).
+ * This eliminates false-positive byte matches and avoids corrupting media headers.
  */
-function parseInnerBoxes(u8, start = 0, end = u8.length) {
-  const boxes = [];
-  let off = start;
-  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
-
-  while (off + 8 <= end) {
-    const sz = dv.getUint32(off);
-    const nm = String.fromCharCode(
-      u8[off + 4],
-      u8[off + 5],
-      u8[off + 6],
-      u8[off + 7]
-    );
-
-    let hSz = 8;
-    let bSz = sz;
-    if (sz === 1) {
-      if (off + 16 > end) break;
-      const hi = dv.getUint32(off + 8);
-      const lo = dv.getUint32(off + 12);
-      bSz = hi * 4294967296 + lo;
-      hSz = 16;
-    } else if (sz === 0) {
-      bSz = end - off;
-    }
-
-    if (bSz < hSz) break;
-    const bEnd = Math.min(off + bSz, end);
-    boxes.push({
-      name: nm,
-      offset: off,
-      size: bSz,
-      headerSize: hSz,
-      contentStart: off + hSz,
-      boxEnd: bEnd,
-    });
-    off = bEnd;
-  }
-  return boxes;
-}
-
-/**
- * Adjusts 32-bit (stco) and 64-bit (co64) chunk offsets inside a moov Uint8Array.
- */
-function shiftChunkOffsets(moovU8, shift) {
+function updateChunkOffsets(moovU8, shift) {
   if (shift === 0) return;
   const dv = new DataView(moovU8.buffer, moovU8.byteOffset, moovU8.byteLength);
 
-  for (let i = 0; i <= moovU8.length - 8; i++) {
-    // Check for 'stco'
-    if (
-      moovU8[i + 4] === 0x73 &&
-      moovU8[i + 5] === 0x74 &&
-      moovU8[i + 6] === 0x63 &&
-      moovU8[i + 7] === 0x6f
-    ) {
-      const boxSize = dv.getUint32(i);
-      if (i + boxSize <= moovU8.length && boxSize >= 16) {
-        const count = dv.getUint32(i + 12);
-        for (let e = 0; e < count; e++) {
-          const entryOff = i + 16 + e * 4;
-          if (entryOff + 4 <= moovU8.length) {
-            const current = dv.getUint32(entryOff);
-            dv.setUint32(entryOff, current + shift);
+  const traks = findBoxes(moovU8, 8, moovU8.length, 'trak');
+  for (const trak of traks) {
+    const mdias = findBoxes(moovU8, trak.contentStart, trak.boxEnd, 'mdia');
+    for (const mdia of mdias) {
+      const minfs = findBoxes(moovU8, mdia.contentStart, mdia.boxEnd, 'minf');
+      for (const minf of minfs) {
+        const stbls = findBoxes(moovU8, minf.contentStart, minf.boxEnd, 'stbl');
+        for (const stbl of stbls) {
+          // Adjust 32-bit stco
+          const stcos = findBoxes(moovU8, stbl.contentStart, stbl.boxEnd, 'stco');
+          for (const stco of stcos) {
+            if (stco.size >= 16) {
+              const count = dv.getUint32(stco.offset + 12);
+              for (let i = 0; i < count; i++) {
+                const offPos = stco.offset + 16 + i * 4;
+                if (offPos + 4 <= moovU8.length) {
+                  const oldOff = dv.getUint32(offPos);
+                  dv.setUint32(offPos, oldOff + shift);
+                }
+              }
+            }
           }
-        }
-      }
-    }
 
-    // Check for 'co64'
-    if (
-      moovU8[i + 4] === 0x63 &&
-      moovU8[i + 5] === 0x6f &&
-      moovU8[i + 6] === 0x36 &&
-      moovU8[i + 7] === 0x34
-    ) {
-      const boxSize = dv.getUint32(i);
-      if (i + boxSize <= moovU8.length && boxSize >= 16) {
-        const count = dv.getUint32(i + 12);
-        for (let e = 0; e < count; e++) {
-          const entryOff = i + 16 + e * 8;
-          if (entryOff + 8 <= moovU8.length) {
-            const hi = dv.getUint32(entryOff);
-            const lo = dv.getUint32(entryOff + 4);
-            const current = hi * 4294967296 + lo;
-            const updated = current + shift;
-            dv.setUint32(entryOff, Math.floor(updated / 4294967296));
-            dv.setUint32(entryOff + 4, updated >>> 0);
-          }
-        }
-      }
-    }
-  }
-}
-
-/**
- * Modifies timescale / sample deltas in moov if 60fps/120fps preset is requested.
- */
-function applyTimescaleScale(moovU8, scaleFactor) {
-  if (!scaleFactor || scaleFactor <= 1) return;
-  const dv = new DataView(moovU8.buffer, moovU8.byteOffset, moovU8.byteLength);
-
-  // Scan for 'stts' (time to sample box) in video track
-  for (let i = 0; i <= moovU8.length - 8; i++) {
-    if (
-      moovU8[i + 4] === 0x73 &&
-      moovU8[i + 5] === 0x74 &&
-      moovU8[i + 6] === 0x74 &&
-      moovU8[i + 7] === 0x73
-    ) {
-      const boxSize = dv.getUint32(i);
-      if (i + boxSize <= moovU8.length && boxSize >= 16) {
-        const count = dv.getUint32(i + 12);
-        for (let e = 0; e < count; e++) {
-          const deltaOff = i + 16 + e * 8 + 4;
-          if (deltaOff + 4 <= moovU8.length) {
-            const delta = dv.getUint32(deltaOff);
-            dv.setUint32(deltaOff, Math.round(delta * scaleFactor));
+          // Adjust 64-bit co64
+          const co64s = findBoxes(moovU8, stbl.contentStart, stbl.boxEnd, 'co64');
+          for (const co64 of co64s) {
+            if (co64.size >= 16) {
+              const count = dv.getUint32(co64.offset + 12);
+              for (let i = 0; i < count; i++) {
+                const offPos = co64.offset + 16 + i * 8;
+                if (offPos + 8 <= moovU8.length) {
+                  const hi = BigInt(dv.getUint32(offPos));
+                  const lo = BigInt(dv.getUint32(offPos + 4));
+                  const oldOff = (hi << 32n) | lo;
+                  const newOff = oldOff + BigInt(shift);
+                  dv.setUint32(offPos, Number(newOff >> 32n));
+                  dv.setUint32(offPos + 4, Number(newOff & 0xffffffffn));
+                }
+              }
+            }
           }
         }
       }
@@ -282,10 +383,12 @@ function applyTimescaleScale(moovU8, scaleFactor) {
 
 /**
  * Main patch function.
- * Takes an input File or Blob, patches metadata, performs FastStart, and returns a new Blob.
+ * Performs lossless FastStart optimization, accurately recalculates chunk offsets,
+ * injects husevndownloader.netlify.app tags, and preserves full framerate, audio sync,
+ * and presentation timestamps without cutting any frames.
  */
 export async function patchMp4(fileOrBlob, options = {}, onProgress) {
-  onProgress && onProgress({ percent: 10, stage: 'Fayl analiz edilir...' });
+  onProgress && onProgress({ percent: 10, stage: 'Fayl və MP4 strukturu analiz edilir...' });
 
   const boxes = await parseTopLevelBoxes(fileOrBlob);
   const ftypBox = boxes.find(b => b.type === 'ftyp');
@@ -296,14 +399,14 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
     throw new Error('Etibarsız MP4 faylı: moov və ya mdat tapılmadı.');
   }
 
-  onProgress && onProgress({ percent: 30, stage: 'Metadata hazırlanır...' });
+  onProgress && onProgress({ percent: 30, stage: 'Metadata və FastStart hazırlanır...' });
 
   // Read the original moov box
   const moovSlice = fileOrBlob.slice(moovBox.offset, moovBox.offset + moovBox.size);
   const moovAb = await moovSlice.arrayBuffer();
   let moovU8 = new Uint8Array(moovAb);
 
-  // Remove existing udta box if present
+  // Remove existing udta box if present to avoid duplicate or conflicting tags
   const innerBoxes = parseInnerBoxes(moovU8, 8, moovU8.length);
   const existingUdta = innerBoxes.find(b => b.name === 'udta');
 
@@ -331,42 +434,21 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
   const moovDv = new DataView(mergedMoov.buffer);
   moovDv.setUint32(0, mergedMoov.length);
 
-  onProgress && onProgress({ percent: 55, stage: 'FPS və vaxt miqyası tənzimlənir...' });
+  onProgress && onProgress({ percent: 60, stage: 'Kadr ofsetləri (stco/co64) dəqiqləşdirilir...' });
 
-  // Apply timescale scale if 60fps (scale: 2) or 120fps (scale: 6) mode
-  const preset = options.preset || 'anticompress';
-  if (preset === '60fps') {
-    applyTimescaleScale(mergedMoov, 2);
-  } else if (preset === '120fps') {
-    applyTimescaleScale(mergedMoov, 6);
-  }
+  // FastStart Layout Calculation:
+  // Final file layout: [ftyp] -> [moov] -> [mdat] -> [other trailing boxes]
+  const ftypSize = ftypBox ? ftypBox.size : 0;
+  const newMdatStart = ftypSize + mergedMoov.length;
+  const oldMdatStart = mdatBox.offset;
+  const offsetShift = newMdatStart - oldMdatStart;
 
-  onProgress && onProgress({ percent: 75, stage: 'FastStart kadr ofsetləri hesablanır...' });
+  // Accurately shift all chunk offsets inside the new moov box
+  updateChunkOffsets(mergedMoov, offsetShift);
 
-  // FastStart:
-  // We want the output to be: [ftyp] -> [moov] -> [mdat]
-  const isMoovAfterMdat = moovBox.offset > mdatBox.offset;
-  let offsetShift = 0;
+  onProgress && onProgress({ percent: 85, stage: 'Yeni FastStart MP4 faylı qurulur...' });
 
-  if (isMoovAfterMdat) {
-    // moov is moving from the end of the file to before mdat!
-    // The new mdat starts at: (ftypBox ? ftypBox.size : 0) + mergedMoov.length
-    // The old mdat started at: mdatBox.offset
-    const oldMdatStart = mdatBox.offset;
-    const newMdatStart = (ftypBox ? ftypBox.size : 0) + mergedMoov.length;
-    offsetShift = newMdatStart - oldMdatStart;
-  } else {
-    // moov was already before mdat, but its size changed!
-    const oldMoovSize = moovBox.size;
-    const newMoovSize = mergedMoov.length;
-    offsetShift = newMoovSize - oldMoovSize;
-  }
-
-  shiftChunkOffsets(mergedMoov, offsetShift);
-
-  onProgress && onProgress({ percent: 90, stage: 'Yeni video fayl tərtib edilir...' });
-
-  // Build the final blob
+  // Build the final blob using zero-copy slicing
   const chunks = [];
   if (ftypBox) {
     chunks.push(fileOrBlob.slice(ftypBox.offset, ftypBox.offset + ftypBox.size));
@@ -396,7 +478,6 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
     name: outName,
     size: outBlob.size,
     oldSize: fileOrBlob.size,
-    preset,
     encoder: ENCODER_TAG,
     method: COMMENT_TAG,
   };

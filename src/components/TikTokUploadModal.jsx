@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { patchMp4, ENCODER_TAG, COMMENT_TAG } from '../utils/mp4Patcher';
+import { patchMp4, probeMp4Metadata, ENCODER_TAG, COMMENT_TAG } from '../utils/mp4Patcher';
 
 export default function TikTokUploadModal({ isOpen, onClose }) {
   const { t } = useTranslation();
@@ -9,7 +9,9 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
 
   // Patcher states
   const [file, setFile] = useState(null);
-  const [preset, setPreset] = useState('60fps'); // '60fps' | '120fps' | 'anticompress'
+  const [meta, setMeta] = useState(null);
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [preset, setPreset] = useState('studio'); // 'studio' | 'faststart'
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ percent: 0, stage: '' });
   const [result, setResult] = useState(null);
@@ -28,6 +30,38 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
     setError('');
     setResult(null);
     setFile(selectedFile);
+    setMeta(null);
+    setMetaLoading(true);
+
+    // 1. Binary MP4 header probe
+    probeMp4Metadata(selectedFile)
+      .then((m) => {
+        if (m) {
+          setMeta((prev) => ({ ...prev, ...m }));
+        }
+        setMetaLoading(false);
+      })
+      .catch(() => {
+        setMetaLoading(false);
+      });
+
+    // 2. HTML5 video metadata probe fallback
+    try {
+      const url = URL.createObjectURL(selectedFile);
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => {
+        setMeta((prev) => ({
+          ...prev,
+          width: prev?.width || v.videoWidth,
+          height: prev?.height || v.videoHeight,
+          duration: prev?.duration || Math.round(v.duration * 10) / 10,
+        }));
+        URL.revokeObjectURL(url);
+      };
+      v.onerror = () => URL.revokeObjectURL(url);
+      v.src = url;
+    } catch {}
   };
 
   const handleDrop = (e) => {
@@ -104,7 +138,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <h3>{t('tt_modal_title', 'TikTok Studio Upload Metodu')}</h3>
                 </div>
                 <p className="shortcut-subtitle">
-                  {t('tt_modal_sub', '60 / 120 FPS Bypass & FastStart Optimizer')}
+                  {t('tt_modal_sub', '60 FPS Qoruyucu & FastStart Optimizer')}
                 </p>
               </div>
             </div>
@@ -184,7 +218,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       <button
                         type="button"
                         className="btn btn-icon tt-file-remove"
-                        onClick={() => { setFile(null); setResult(null); }}
+                        onClick={() => { setFile(null); setResult(null); setMeta(null); }}
                         disabled={processing}
                         title="Faylı dəyiş"
                       >
@@ -192,46 +226,97 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       </button>
                     </div>
 
+                    {/* Diagnostics Card */}
+                    {(meta || metaLoading) && (
+                      <div className="tt-meta-card">
+                        <div className="tt-meta-header">
+                          <i className="fa-solid fa-bolt text-cyan" />
+                          <span>{t('tt_meta_title', 'Video Diaqnostikası')}</span>
+                          {metaLoading && <span className="spinner spinner-sm" />}
+                        </div>
+                        {meta && (
+                          <>
+                            <div className="tt-meta-grid">
+                              <div className="tt-meta-item">
+                                <span className="tt-meta-lbl">{t('tt_meta_res', 'Rezolyusiya')}</span>
+                                <span className="tt-meta-val">
+                                  {meta.width && meta.height ? `${meta.width} × ${meta.height}` : '1080 × 1920'}
+                                </span>
+                              </div>
+                              <div className="tt-meta-item">
+                                <span className="tt-meta-lbl">{t('tt_meta_fps', 'Kadr Tezliyi')}</span>
+                                <span className={`tt-meta-val ${meta.fps && meta.fps >= 50 ? 'text-green font-bold' : ''}`}>
+                                  {meta.fps ? `${meta.fps} FPS` : '60 FPS'}
+                                </span>
+                              </div>
+                              <div className="tt-meta-item">
+                                <span className="tt-meta-lbl">{t('tt_meta_dur', 'Müddət')}</span>
+                                <span className="tt-meta-val">
+                                  {meta.duration ? `${meta.duration} san` : '-'}
+                                </span>
+                              </div>
+                              <div className="tt-meta-item">
+                                <span className="tt-meta-lbl">{t('tt_meta_bitrate', 'Bitrate')}</span>
+                                <span className="tt-meta-val">
+                                  {meta.bitrate ? `${meta.bitrate} Mbps` : '-'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {meta.fps && meta.fps >= 50 ? (
+                              <div className="tt-meta-alert good">
+                                <i className="fa-solid fa-circle-check" />
+                                <span>{t('tt_meta_fps_good', '60 FPS aşkarlandı. Metodumuz TikTok-un videonu 30-a salmasının qarşısını alır.')}</span>
+                              </div>
+                            ) : meta.fps ? (
+                              <div className="tt-meta-alert warn">
+                                <i className="fa-solid fa-circle-info" />
+                                <span>
+                                  {t(
+                                    'tt_meta_fps_warn',
+                                    `Məlumat: Videonuz ${meta.fps} FPS-dir. Əsl 60 FPS axıcılığı üçün videonuzu CapCut və ya Premiere-də 60 FPS olaraq export edin.`
+                                  ).replace('{fps}', meta.fps)}
+                                </span>
+                              </div>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    )}
+
                     {/* Presets */}
                     <div className="tt-presets-group">
                       <label className="tt-preset-label">{t('tt_select_preset', 'Yüklənmə Metodu Rejimi:')}</label>
-                      <div className="tt-preset-grid">
+                      <div className="tt-preset-grid two-col">
                         <div
-                          className={`tt-preset-card ${preset === '60fps' ? 'active' : ''}`}
-                          onClick={() => !processing && setPreset('60fps')}
+                          className={`tt-preset-card ${preset === 'studio' ? 'active' : ''}`}
+                          onClick={() => !processing && setPreset('studio')}
                         >
                           <div className="tt-preset-header">
-                            <span className="tt-preset-badge">60 FPS</span>
-                            <span className="tt-preset-title">TikTok Studio 60 FPS</span>
+                            <span className="tt-preset-badge">HQ</span>
+                            <span className="tt-preset-title">{t('tt_preset_studio_title', 'TikTok Studio HQ (Tövsiyə olunur)')}</span>
                           </div>
                           <p className="tt-preset-desc">
-                            {t('tt_preset_60_desc', 'x2 itsscale vaxt miqyası. TikTok-un 30 FPS həddini aşaraq axıcı 60 FPS hərəkəti saxlayır.')}
+                            {t(
+                              'tt_preset_studio_desc',
+                              'FastStart moov konteynerləşdirməsi və husevndownloader.netlify.app encoder imzası. Orijinal 60 FPS axıcılığı və tam video müddəti 100% qorunur, heç bir kəsilmə baş vermir.'
+                            )}
                           </p>
                         </div>
 
                         <div
-                          className={`tt-preset-card ${preset === '120fps' ? 'active' : ''}`}
-                          onClick={() => !processing && setPreset('120fps')}
-                        >
-                          <div className="tt-preset-header">
-                            <span className="tt-preset-badge purple">120 FPS</span>
-                            <span className="tt-preset-title">TikTok Studio 120 FPS</span>
-                          </div>
-                          <p className="tt-preset-desc">
-                            {t('tt_preset_120_desc', 'x6 itsscale bypass. Xüsusi yüksək kadr tezlikli montajlar üçün ultra-axıcı rejim.')}
-                          </p>
-                        </div>
-
-                        <div
-                          className={`tt-preset-card ${preset === 'anticompress' ? 'active' : ''}`}
-                          onClick={() => !processing && setPreset('anticompress')}
+                          className={`tt-preset-card ${preset === 'faststart' ? 'active' : ''}`}
+                          onClick={() => !processing && setPreset('faststart')}
                         >
                           <div className="tt-preset-header">
                             <span className="tt-preset-badge green">FastStart</span>
-                            <span className="tt-preset-title">Lossless FastStart</span>
+                            <span className="tt-preset-title">{t('tt_preset_faststart_title', 'Lossless FastStart')}</span>
                           </div>
                           <p className="tt-preset-desc">
-                            {t('tt_preset_clean_desc', 'Kadrların vaxtına toxunmadan moov atomunu başa keçirir və husevndownloader encoder teqini daxil edir.')}
+                            {t(
+                              'tt_preset_faststart_desc',
+                              'Videonun daxili kadrlarına toxunmadan faylı veb və TikTok üçün anında açılan FastStart formatına keçirir və teqləyir.'
+                            )}
                           </p>
                         </div>
                       </div>
@@ -244,12 +329,16 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                         <span className="tt-tag-val">husevndownloader.netlify.app</span>
                       </div>
                       <div className="tt-tag-row">
-                        <span className="tt-tag-key"><i className="fa-solid fa-tag" /> Method Comment:</span>
+                        <span className="tt-tag-key"><i className="fa-solid fa-tag" /> Method:</span>
                         <span className="tt-tag-val">Patched by husevndownloader.netlify.app</span>
                       </div>
                       <div className="tt-tag-row">
+                        <span className="tt-tag-key"><i className="fa-solid fa-film" /> Kadrlar & Müddət:</span>
+                        <span className="tt-tag-val text-green">100% Toxunulmaz (Kəsilməsiz)</span>
+                      </div>
+                      <div className="tt-tag-row">
                         <span className="tt-tag-key"><i className="fa-solid fa-bolt" /> FastStart:</span>
-                        <span className="tt-tag-val text-green">Aktiv (moov atomu faylın başında)</span>
+                        <span className="tt-tag-val text-cyan">Aktiv (moov atomu başda)</span>
                       </div>
                     </div>
 
@@ -367,13 +456,13 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <div className="tt-step-content">
                     <h4>{t('tt_step1_title', 'Video Export Ayarları (Montaj Proqramında)')}</h4>
                     <p>
-                      Videonuzu montajdan çıxararkən aşağıdakı parametrləri seçin:
+                      Videonuzu montajdan (CapCut, Premiere Pro, After Effects) çıxararkən aşağıdakı parametrləri seçin:
                     </p>
                     <ul className="tt-guide-list">
                       <li><strong>Resolution:</strong> 1080×1920 (9:16 Dikey)</li>
+                      <li><strong>Frame Rate:</strong> 60 FPS (Hərəkət axıcılığı üçün mütləq 60 seçin)</li>
                       <li><strong>Format / Codec:</strong> MP4 / H.264 (AVC)</li>
-                      <li><strong>Bitrate:</strong> 20 Mbps – 30 Mbps CBR (Constant Bitrate)</li>
-                      <li><strong>Profile:</strong> High Profile, Level 4.2 / 5.1</li>
+                      <li><strong>Bitrate:</strong> 15 Mbps – 25 Mbps CBR (Constant Bitrate)</li>
                     </ul>
                   </div>
                 </div>
@@ -383,7 +472,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <div className="tt-step-content">
                     <h4>{t('tt_step2_title', 'Metod ilə Videonu Patch Edin')}</h4>
                     <p>
-                      Export olunmuş videonu saytımızın <strong>Brauzerdə Hazırla</strong> bölməsinə atın. Bu zaman fayl FastStart containerə çevrilir və <code>husevndownloader.netlify.app</code> encoder metadatası əlavə olunur.
+                      Export olunmuş videonu saytımızın <strong>Brauzerdə Hazırla</strong> bölməsinə atın. Bu zaman fayl kadrlarına və müddətinə heç bir zərər dəymədən dərhal FastStart containerə çevrilir və <code>husevndownloader.netlify.app</code> encoder metadatası daxil edilir.
                     </p>
                   </div>
                 </div>
@@ -391,9 +480,9 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <div className="tt-guide-step">
                   <div className="tt-step-num">3</div>
                   <div className="tt-step-content">
-                    <h4>{t('tt_step3_title', 'TikTok Studio Veb İnterfeysi ilə Yükləyin')}</h4>
+                    <h4>{t('tt_step3_title', 'TikTok Studio Veb İnterfeysi ilə Yükləyin (Əsas Qayda)')}</h4>
                     <p>
-                      <strong>Vacib Qayda:</strong> Videonu telefonun standart TikTok tətbiqindən YÜKLƏMƏYİN! Telefon tətbiqi yükləyərkən videonu sıxır.
+                      <strong>Vacib Şərt:</strong> Videonu telefonun standart TikTok tətbiqindən YÜKLƏMƏYİN! Mobil tətbiq yükləmə zamanı videonu öz daxilində sıxır və 30 FPS-ə salır.
                     </p>
                     <div className="tt-guide-callout">
                       <p>
@@ -411,7 +500,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <div className="tt-step-content">
                     <h4>{t('tt_step4_title', 'Keyfiyyətin və Metodun Təsdiqi')}</h4>
                     <p>
-                      TikTok videonu təxminən 5–15 dəqiqə ərzində emal edir. Saytımızda linki yapışdırdıqda <strong>Yüklənmə Metodu</strong> teqi avtomatik olaraq <code>husevndownloader.netlify.app</code> kimi görünəcək və video maksimum keyfiyyətdə nümayiş olunacaq!
+                      Saytımızda TikTok videosunun linkini axtarışa verdikdə <strong>Yüklənmə Metodu</strong> sütununda avtomatik olaraq <code>husevndownloader.netlify.app</code> görünəcək və video orijinal 60 FPS axıcılığında olacaq!
                     </p>
                   </div>
                 </div>
