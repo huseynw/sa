@@ -448,20 +448,30 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <div className="tt-guide-video-wrapper">
                   <div className="tt-vertical-video-box">
                     <video
-                      src="/tuto.mp4"
+                      src="https://github.com/huseynw/sa/releases/download/v1.0.0/tuto.mp4"
                       controls
                       playsInline
                       preload="metadata"
                       className="tt-vertical-video-player"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
+                      onLoadedMetadata={(e) => {
+                        e.currentTarget.style.display = 'block';
                         const ph = e.currentTarget.parentElement?.querySelector('.tt-video-placeholder');
-                        if (ph) ph.style.display = 'flex';
+                        if (ph) ph.style.display = 'none';
+                      }}
+                      onCanPlay={(e) => {
+                        e.currentTarget.style.display = 'block';
+                        const ph = e.currentTarget.parentElement?.querySelector('.tt-video-placeholder');
+                        if (ph) ph.style.display = 'none';
                       }}
                       onLoadedData={(e) => {
                         e.currentTarget.style.display = 'block';
                         const ph = e.currentTarget.parentElement?.querySelector('.tt-video-placeholder');
                         if (ph) ph.style.display = 'none';
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const ph = e.currentTarget.parentElement?.querySelector('.tt-video-placeholder');
+                        if (ph) ph.style.display = 'flex';
                       }}
                     />
                     <div className="tt-video-placeholder">
