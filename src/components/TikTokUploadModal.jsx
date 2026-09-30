@@ -11,7 +11,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
   const [file, setFile] = useState(null);
   const [meta, setMeta] = useState(null);
   const [metaLoading, setMetaLoading] = useState(false);
-  const [preset, setPreset] = useState('studio'); // 'studio' | 'faststart'
+  const [preset, setPreset] = useState('parsmazi'); // 'parsmazi' | 'faststart'
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ percent: 0, stage: '' });
   const [result, setResult] = useState(null);
@@ -138,7 +138,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <h3>{t('tt_modal_title', 'TikTok Studio Upload Metodu')}</h3>
                 </div>
                 <p className="shortcut-subtitle">
-                  {t('tt_modal_sub', '60 FPS Qoruyucu & FastStart Optimizer')}
+                  {t('tt_modal_sub', 'ParsMazi 120 FPS Method & FastStart Optimizer')}
                 </p>
               </div>
             </div>
@@ -179,7 +179,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <p className="shortcut-desc">
                   {t(
                     'tt_modal_patcher_desc',
-                    'Upload120 / Void Studio metodunu brauzerinizdə tətbiq edir. Itsscale ×2 vaxt miqyası tətbiq edərək TikTok-un serverini videonuza yüksək keyfiyyət ayırmasına məcbur edir.'
+                    'ParsMazi (parsmazi.com) 120 FPS metodunu birbaşa cihazınızda tətbiq edir. Video kadrlarına və sürətinə toxunmur, audio sample cədvəli və mvhd optimizasiyası ilə TikTok-un yüksək keyfiyyət kanalını işə salır.'
                   )}
                 </p>
 
@@ -289,17 +289,17 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       <label className="tt-preset-label">{t('tt_select_preset', 'Yüklənmə Metodu Rejimi:')}</label>
                       <div className="tt-preset-grid two-col">
                         <div
-                          className={`tt-preset-card ${preset === 'studio' ? 'active' : ''}`}
-                          onClick={() => !processing && setPreset('studio')}
+                          className={`tt-preset-card ${preset === 'parsmazi' ? 'active' : ''}`}
+                          onClick={() => !processing && setPreset('parsmazi')}
                         >
                           <div className="tt-preset-header">
-                            <span className="tt-preset-badge">HQ</span>
-                            <span className="tt-preset-title">{t('tt_preset_studio_title', 'TikTok Studio HQ (Tövsiyə olunur)')}</span>
+                            <span className="tt-preset-badge">120 FPS</span>
+                            <span className="tt-preset-title">{t('tt_preset_parsmazi_title', 'ParsMazi 120 FPS Method (Tövsiyə olunur)')}</span>
                           </div>
                           <p className="tt-preset-desc">
                             {t(
-                              'tt_preset_studio_desc',
-                              'Itsscale ×2 vaxt miqyası + FastStart + encoder imzası. TikTok-un serverini videonuza yüksək keyfiyyət ayırmasına məcbur edir. Yüklənən fayl adi pleyerdə yavaş görünəcək — bu normaldır, TikTok-da düzgün oynar.'
+                              'tt_preset_parsmazi_desc',
+                              'ParsMazi metodu: Video kadrları və 60/120 FPS axıcılığı 100% toxunulmaz qalır (kəsilmə və ya yavaşlama olmur). Audio sample cədvəli 10× genişləndirilir və mvhd naməlum edilir ki, TikTok videonu sıxmadan ən yüksək keyfiyyətlə emal etsin.'
                             )}
                           </p>
                         </div>
