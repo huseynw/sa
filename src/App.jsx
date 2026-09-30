@@ -574,7 +574,7 @@ function App() {
 
   return (
     <>
-      <Header onOpenUploadMethod={() => setShowUploadMethod(true)} />
+      <Header />
 
       <main>
         <motion.div
@@ -585,6 +585,21 @@ function App() {
         >
           <OdometerTitle />
           <p className="hero-sub">{t('hero_subtitle')}</p>
+
+          <div className="hero-tt-btn-container">
+            <button
+              type="button"
+              className="btn-hero-tt-method"
+              onClick={() => setShowUploadMethod(true)}
+              title="TikTok Studio Upload Metodu (120 FPS)"
+            >
+              <span className="tt-method-live-dot" />
+              <i className="fa-brands fa-tiktok" />
+              <span className="btn-hero-tt-title">{t('tt_banner_title', 'TikTok Studio Upload Metodu')}</span>
+              <span className="btn-hero-tt-badge">120 FPS HQ</span>
+              <i className="fa-solid fa-arrow-right btn-hero-tt-chevron" />
+            </button>
+          </div>
         </motion.div>
         <div className="platform-tabs">
           {platforms.map(p => {

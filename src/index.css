@@ -2748,30 +2748,113 @@ main {
    TIKTOK UPLOAD METHOD (STUDIO ANTI-COMPRESSION) STYLES
    ======================================================== */
 
-.btn-tt-method-header {
+/* Hero TikTok Method Button */
+.hero-tt-btn-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 14px auto 0 auto;
+  width: 100%;
+}
+
+.btn-hero-tt-method {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  justify-content: center;
+  gap: 10px;
+  padding: 9px 20px;
   border-radius: 9999px;
-  background: rgba(105, 201, 208, 0.12);
-  border: 1px solid rgba(105, 201, 208, 0.3);
-  color: #69c9d0;
-  font-size: 0.8rem;
+  background: rgba(105, 201, 208, 0.08);
+  border: 1px solid rgba(105, 201, 208, 0.32);
+  color: var(--text);
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 0 12px rgba(105, 201, 208, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 16px rgba(105, 201, 208, 0.12);
+  max-width: 95%;
+  text-decoration: none;
 }
-.btn-tt-method-header:hover {
-  background: rgba(105, 201, 208, 0.22);
+
+.btn-hero-tt-method:hover {
+  background: rgba(105, 201, 208, 0.18);
   border-color: #69c9d0;
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 0 18px rgba(105, 201, 208, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18), 0 0 25px rgba(105, 201, 208, 0.32);
 }
-.btn-tt-method-header i {
-  font-size: 0.95rem;
+
+.btn-hero-tt-method:active {
+  transform: scale(0.98);
+}
+
+.btn-hero-tt-method i.fa-tiktok {
+  color: #69c9d0;
+  font-size: 1.15rem;
+  filter: drop-shadow(0 0 8px rgba(105, 201, 208, 0.5));
+}
+
+.tt-method-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseLiveDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseLiveDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.btn-hero-tt-title {
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.btn-hero-tt-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #69c9d0, #ee1d52);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(238, 29, 82, 0.3);
+}
+
+.btn-hero-tt-chevron {
+  font-size: 0.78rem;
+  color: var(--text3);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.btn-hero-tt-method:hover .btn-hero-tt-chevron {
+  color: #69c9d0;
+  transform: translateX(3px);
+}
+
+@media (max-width: 600px) {
+  .hero-tt-btn-container {
+    margin-top: 10px;
+  }
+  .btn-hero-tt-method {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .btn-hero-tt-method i.fa-tiktok {
+    font-size: 1rem;
+  }
+  .btn-hero-tt-badge {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+  }
 }
 
 /* Banner in TikTok platform tab */
@@ -3502,12 +3585,6 @@ main {
 }
 
 @media (max-width: 640px) {
-  .btn-tt-method-header span {
-    display: none;
-  }
-  .btn-tt-method-header {
-    padding: 6px 10px;
-  }
   .tt-upload-method-banner {
     flex-direction: column;
     align-items: flex-start;

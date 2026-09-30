@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import ShortcutModal from './ShortcutModal';
-import TikTokUploadModal from './TikTokUploadModal';
 
-const Header = ({ onOpenUploadMethod }) => {
+const Header = () => {
   const { i18n, t } = useTranslation();
   const [theme, setTheme] = useState('dark');
   const [scrolled, setScrolled] = useState(false);
   const [showShortcut, setShowShortcut] = useState(false);
-  const [internalShowUploadMethod, setInternalShowUploadMethod] = useState(false);
-
-  const handleOpenUploadMethod = onOpenUploadMethod || (() => setInternalShowUploadMethod(true));
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -49,15 +45,6 @@ const Header = ({ onOpenUploadMethod }) => {
         </div>
 
         <div className="header-right">
-          <button
-            type="button"
-            onClick={handleOpenUploadMethod}
-            className="btn-tt-method-header"
-            title="TikTok Studio Upload Metodu (60/120 FPS)"
-          >
-            <i className="fa-brands fa-tiktok" />
-            <span>{t('tt_upload_method_btn', 'TikTok Metod')}</span>
-          </button>
 
           <button
             type="button"
@@ -97,12 +84,6 @@ const Header = ({ onOpenUploadMethod }) => {
       </header>
 
       <ShortcutModal isOpen={showShortcut} onClose={() => setShowShortcut(false)} />
-      {!onOpenUploadMethod && (
-        <TikTokUploadModal
-          isOpen={internalShowUploadMethod}
-          onClose={() => setInternalShowUploadMethod(false)}
-        />
-      )}
     </>
   );
 };
