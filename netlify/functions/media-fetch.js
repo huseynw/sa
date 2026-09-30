@@ -408,15 +408,17 @@ export const handler = async (event) => {
               data: {
                 title: d.title || '',
                 cover: d.cover || '',
-                videoUrl: d.play || '',
-                videoUrlNoWatermark: d.play || '',
+                videoUrl: d.hdplay || d.play || '',
+                videoUrlHD: d.hdplay || d.play || '',
+                videoUrlSD: d.play || '',
+                videoUrlNoWatermark: d.hdplay || d.play || '',
                 music: d.music || '',
                 images: Array.isArray(d.images) ? d.images : [],
                 metadata: {
                   uploadDate: d.create_time ? new Date(d.create_time * 1000).toISOString() : null,
                   region: d.region ? d.region.toUpperCase() : null,
                   shadowban: !!d.is_nff_or_nr,
-                  resolution: Array.isArray(d.images) && d.images.length > 0 ? 'Original' : '1080×1920 (FHD)',
+                  resolution: Array.isArray(d.images) && d.images.length > 0 ? 'Original' : (d.hdplay ? '1080×1920 (FHD)' : '720×1280 (HD)'),
                   fps: null,
                   bitrate: bitrateMbps ? `${bitrateMbps} Mbps` : null,
                   duration: dur,
@@ -439,6 +441,11 @@ export const handler = async (event) => {
         if (!data?.data?.videoUrl && (!data?.data?.images || data.data.images.length === 0)) {
           try {
             data = await meganGet('/api/download/tiktok', { url });
+            if (data?.data) {
+              const mv = data.data.videoUrl || data.data.download || data.data.play || '';
+              if (!data.data.videoUrlHD) data.data.videoUrlHD = data.data.hdplay || mv;
+              if (!data.data.videoUrlSD) data.data.videoUrlSD = data.data.play || mv;
+            }
           } catch (e) {
             console.warn('[megan-proxy] Megan TikTok fallback error:', e.message);
           }

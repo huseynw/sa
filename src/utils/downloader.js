@@ -236,6 +236,257 @@ const attachId3ToMp3 = async (mp3Blob, meta = {}) => {
   }
 };
 
+// --- MP4 Binary Box Parser & Gallery Sanitizer ---
+
+function findMp4Box(view, targetType, start = 0, end = view.byteLength) {
+  let off = start;
+  while (off <= end - 8) {
+    const size = view.getUint32(off, false);
+    const type = String.fromCharCode(
+      view.getUint8(off + 4),
+      view.getUint8(off + 5),
+      view.getUint8(off + 6),
+      view.getUint8(off + 7)
+    );
+    const boxSize = size === 1 ? Number(view.getBigUint64(off + 8, false)) : (size === 0 ? end - off : size);
+    if (boxSize < 8 || off + boxSize > end) break;
+    if (type === targetType) return { offset: off, size: boxSize, headerSize: size === 1 ? 16 : 8 };
+    off += boxSize;
+  }
+  return null;
+}
+
+function findAllMp4Boxes(view, targetType, start = 0, end = view.byteLength) {
+  const list = [];
+  let off = start;
+  while (off <= end - 8) {
+    const size = view.getUint32(off, false);
+    const type = String.fromCharCode(
+      view.getUint8(off + 4),
+      view.getUint8(off + 5),
+      view.getUint8(off + 6),
+      view.getUint8(off + 7)
+    );
+    const boxSize = size === 1 ? Number(view.getBigUint64(off + 8, false)) : (size === 0 ? end - off : size);
+    if (boxSize < 8 || off + boxSize > end) break;
+    if (type === targetType) list.push({ offset: off, size: boxSize, headerSize: size === 1 ? 16 : 8 });
+    off += boxSize;
+  }
+  return list;
+}
+
+/**
+ * Lossless in-browser MP4 container repair for phone gallery compatibility.
+ * 
+ * Why:
+ * When videos uploaded via custom patchers or 120 FPS techniques are downloaded back
+ * from TikTok, mvhd.duration is often 0xFFFFFFFFFFFFFFFF (unknown/infinite).
+ * Mobile video engines (iOS Photos app AVFoundation, Samsung/Xiaomi Gallery Stagefright)
+ * crash or fail with "Cannot Open Video" on invalid durations.
+ * 
+ * This function calculates the exact track duration from the sample table (stts) or mdhd
+ * and writes a valid duration into mvhd, tkhd, mdhd, and elst without touching the video/audio
+ * payload (mdat). Result: 100% original quality, zero recompression, perfect gallery playback.
+ */
+export function sanitizeMp4Buffer(arrayBuffer, { isMuted = false } = {}) {
+  try {
+    const bytes = new Uint8Array(arrayBuffer);
+    if (bytes.length < 32) return bytes;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+    const moov = findMp4Box(view, 'moov');
+    if (!moov) return bytes;
+
+    const mvhd = findMp4Box(view, 'mvhd', moov.offset + moov.headerSize, moov.offset + moov.size);
+    if (!mvhd) return bytes;
+
+    const mvhdVer = view.getUint8(mvhd.offset + mvhd.headerSize);
+    const mvhdTs = mvhdVer === 0
+      ? view.getUint32(mvhd.offset + mvhd.headerSize + 12, false)
+      : view.getUint32(mvhd.offset + mvhd.headerSize + 20, false);
+
+    const rawMvhdDur = mvhdVer === 0
+      ? view.getUint32(mvhd.offset + mvhd.headerSize + 16, false)
+      : view.getBigUint64(mvhd.offset + mvhd.headerSize + 24, false);
+
+    const traks = findAllMp4Boxes(view, 'trak', moov.offset + moov.headerSize, moov.offset + moov.size);
+    let maxDurSec = 0;
+    let videoDurSec = 0;
+    let audioTrackCount = 0;
+    const trakMeta = [];
+
+    for (const trak of traks) {
+      const tkhd = findMp4Box(view, 'tkhd', trak.offset + trak.headerSize, trak.offset + trak.size);
+      const mdia = findMp4Box(view, 'mdia', trak.offset + trak.headerSize, trak.offset + trak.size);
+      if (!mdia) continue;
+
+      const hdlr = findMp4Box(view, 'hdlr', mdia.offset + mdia.headerSize, mdia.offset + mdia.size);
+      let handler = '';
+      if (hdlr) {
+        handler = String.fromCharCode(
+          view.getUint8(hdlr.offset + hdlr.headerSize + 8),
+          view.getUint8(hdlr.offset + hdlr.headerSize + 9),
+          view.getUint8(hdlr.offset + hdlr.headerSize + 10),
+          view.getUint8(hdlr.offset + hdlr.headerSize + 11)
+        );
+      }
+
+      const mdhd = findMp4Box(view, 'mdhd', mdia.offset + mdia.headerSize, mdia.offset + mdia.size);
+      if (!mdhd) continue;
+
+      const mdhdVer = view.getUint8(mdhd.offset + mdhd.headerSize);
+      const mdhdTs = mdhdVer === 0
+        ? view.getUint32(mdhd.offset + mdhd.headerSize + 12, false)
+        : view.getUint32(mdhd.offset + mdhd.headerSize + 20, false);
+
+      let trackDurUnits = 0;
+      const minf = findMp4Box(view, 'minf', mdia.offset + mdia.headerSize, mdia.offset + mdia.size);
+      if (minf) {
+        const stbl = findMp4Box(view, 'stbl', minf.offset + minf.headerSize, minf.offset + minf.size);
+        if (stbl) {
+          const stts = findMp4Box(view, 'stts', stbl.offset + stbl.headerSize, stbl.offset + stbl.size);
+          if (stts) {
+            const entryCount = view.getUint32(stts.offset + stts.headerSize + 4, false);
+            let sumDelta = 0;
+            let off = stts.offset + stts.headerSize + 8;
+            for (let i = 0; i < entryCount; i++) {
+              if (off + 8 > stts.offset + stts.size) break;
+              const sc = view.getUint32(off, false);
+              const sd = view.getUint32(off + 4, false);
+              sumDelta += sc * sd;
+              off += 8;
+            }
+            if (sumDelta > 0) trackDurUnits = sumDelta;
+          }
+        }
+      }
+
+      if (!trackDurUnits) {
+        const rawMdhdDur = mdhdVer === 0
+          ? view.getUint32(mdhd.offset + mdhd.headerSize + 16, false)
+          : Number(view.getBigUint64(mdhd.offset + mdhd.headerSize + 24, false));
+        if (rawMdhdDur > 0 && rawMdhdDur !== 0xFFFFFFFF && rawMdhdDur !== 0xFFFFFFFFFFFFFFFFn) {
+          trackDurUnits = rawMdhdDur;
+        }
+      }
+
+      const durSec = (mdhdTs > 0 && trackDurUnits > 0) ? (trackDurUnits / mdhdTs) : 0;
+      if (durSec > 0 && durSec < 86400 * 30) {
+        if (durSec > maxDurSec) maxDurSec = durSec;
+        if (handler === 'vide' && durSec > videoDurSec) videoDurSec = durSec;
+      }
+
+      if (handler === 'soun') audioTrackCount++;
+
+      trakMeta.push({
+        trak, tkhd, mdia, mdhd, mdhdVer, mdhdTs, handler,
+        trackDurUnits, durSec,
+        isSecondaryAudio: handler === 'soun' && audioTrackCount > 1
+      });
+    }
+
+    const effectiveDurSec = videoDurSec > 0 ? videoDurSec : maxDurSec;
+    const isMvhdBroken = (
+      rawMvhdDur <= 0 ||
+      rawMvhdDur === 0xFFFFFFFF ||
+      rawMvhdDur === 0xFFFFFFFFFFFFFFFFn ||
+      (mvhdTs > 0 && (Number(rawMvhdDur) / mvhdTs) > 86400 * 30)
+    );
+
+    if ((isMvhdBroken || isMuted) && effectiveDurSec > 0 && mvhdTs > 0) {
+      const fixedMvhdDur = Math.round(effectiveDurSec * mvhdTs);
+      if (mvhdVer === 0) {
+        view.setUint32(mvhd.offset + mvhd.headerSize + 16, fixedMvhdDur, false);
+      } else {
+        view.setBigUint64(mvhd.offset + mvhd.headerSize + 24, BigInt(fixedMvhdDur), false);
+      }
+
+      for (const info of trakMeta) {
+        const trackDurInMvhd = Math.round((info.durSec || effectiveDurSec) * mvhdTs);
+
+        if (info.tkhd) {
+          const tkhdVer = view.getUint8(info.tkhd.offset + info.tkhd.headerSize);
+          if (tkhdVer === 0) {
+            view.setUint32(info.tkhd.offset + info.tkhd.headerSize + 20, trackDurInMvhd, false);
+          } else {
+            view.setBigUint64(info.tkhd.offset + info.tkhd.headerSize + 28, BigInt(trackDurInMvhd), false);
+          }
+
+          if (info.handler === 'soun') {
+            if (isMuted || info.isSecondaryAudio) {
+              bytes[info.tkhd.offset + info.tkhd.headerSize + 1] = 0;
+              bytes[info.tkhd.offset + info.tkhd.headerSize + 2] = 0;
+              bytes[info.tkhd.offset + info.tkhd.headerSize + 3] = 0;
+            } else {
+              bytes[info.tkhd.offset + info.tkhd.headerSize + 1] = 0;
+              bytes[info.tkhd.offset + info.tkhd.headerSize + 2] = 0;
+              bytes[info.tkhd.offset + info.tkhd.headerSize + 3] = 3;
+            }
+          } else if (info.handler === 'vide') {
+            bytes[info.tkhd.offset + info.tkhd.headerSize + 1] = 0;
+            bytes[info.tkhd.offset + info.tkhd.headerSize + 2] = 0;
+            bytes[info.tkhd.offset + info.tkhd.headerSize + 3] = 3;
+          }
+        }
+
+        if (info.mdhd && info.trackDurUnits > 0) {
+          if (info.mdhdVer === 0) {
+            view.setUint32(info.mdhd.offset + info.mdhd.headerSize + 16, info.trackDurUnits, false);
+          } else {
+            view.setBigUint64(info.mdhd.offset + info.mdhd.headerSize + 24, BigInt(info.trackDurUnits), false);
+          }
+        }
+
+        const edts = findMp4Box(view, 'edts', info.trak.offset + info.trak.headerSize, info.trak.offset + info.trak.size);
+        if (edts) {
+          const elst = findMp4Box(view, 'elst', edts.offset + edts.headerSize, edts.offset + edts.size);
+          if (elst) {
+            const elstVer = view.getUint8(elst.offset + elst.headerSize);
+            const entryCount = view.getUint32(elst.offset + elst.headerSize + 4, false);
+            let elstOff = elst.offset + elst.headerSize + 8;
+            for (let i = 0; i < entryCount; i++) {
+              if (elstVer === 0) {
+                if (elstOff + 12 > elst.offset + elst.size) break;
+                const segDur = view.getUint32(elstOff, false);
+                if (segDur === 0xFFFFFFFF || segDur <= 0 || (mvhdTs > 0 && segDur / mvhdTs > 86400 * 30)) {
+                  view.setUint32(elstOff, trackDurInMvhd, false);
+                }
+                elstOff += 12;
+              } else {
+                if (elstOff + 20 > elst.offset + elst.size) break;
+                const segDur = view.getBigUint64(elstOff, false);
+                if (segDur === 0xFFFFFFFFFFFFFFFFn || segDur <= 0n || (mvhdTs > 0 && Number(segDur) / mvhdTs > 86400 * 30)) {
+                  view.setBigUint64(elstOff, BigInt(trackDurInMvhd), false);
+                }
+                elstOff += 20;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return bytes;
+  } catch (err) {
+    console.warn('[downloader] sanitizeMp4Buffer exception:', err);
+    return new Uint8Array(arrayBuffer);
+  }
+}
+
+export const sanitizeVideoForGallery = async (blob, { isMuted = false } = {}) => {
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    const cleanBytes = sanitizeMp4Buffer(arrayBuffer, { isMuted });
+    return new Blob([cleanBytes], { type: 'video/mp4' });
+  } catch (err) {
+    console.warn('[downloader] sanitizeVideoForGallery error:', err);
+    if (blob.type !== 'video/mp4') {
+      return new Blob([blob], { type: 'video/mp4' });
+    }
+    return blob;
+  }
+};
+
 export const downloadFile = async (url, filename, onProgress, metadata = {}) => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -283,8 +534,41 @@ export const downloadFile = async (url, filename, onProgress, metadata = {}) => 
             blob = await convertBlobToMp3(blob);
             blob = await attachId3ToMp3(blob, metadata);
           } catch {}
+        } else if (outName.toLowerCase().endsWith('.mp4') || blob.type.includes('video')) {
+          try {
+            onProgress && onProgress({ percent: 99, speed: 'Optimizasiya...' });
+            blob = await sanitizeVideoForGallery(blob, { isMuted: !!metadata.isMuted });
+            outName = outName.replace(/\.(mp4|mov|m4v)$/i, '') + '.mp4';
+          } catch (e) {
+            console.warn('[downloader] Video gallery sanitation error:', e.message);
+            if (blob.type !== 'video/mp4') {
+              blob = new Blob([blob], { type: 'video/mp4' });
+            }
+          }
         }
 
+        // On mobile devices (iOS / Android), Web Share API provides direct 1-tap "Save Video"
+        // directly into the native Photos / Gallery app!
+        const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const file = new File([blob], outName, { type: blob.type || 'video/mp4' });
+
+        if (isMobile && typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: outName,
+            });
+            resolve();
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') {
+              resolve();
+              return;
+            }
+          }
+        }
+
+        // Standard anchor download fallback
         const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.style.display = "none";

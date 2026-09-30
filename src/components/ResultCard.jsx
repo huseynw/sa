@@ -142,7 +142,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
     return `HUSEVN DOWNLOADER - ${cleanTitle}`;
   };
 
-  const handleDownload = async ({ audioOnly = false, specificUrl = null, isMuted = false, imageMode = false } = {}) => {
+  const handleDownload = async ({ audioOnly = false, specificUrl = null, isMuted = false, imageMode = false, quality = 'hd' } = {}) => {
     try {
       setDownloading(true);
       setProgressData({ percent: 0, speed: 0 });
@@ -217,8 +217,11 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           if (audioOnly) {
             dlUrl = d.music || d.audioUrl || d.download || d.url;
             dlExt = 'mp3';
+          } else if (quality === 'sd') {
+            dlUrl = d.videoUrlSD || d.play || d.videoUrl || d.download || d.url;
+            dlExt = 'mp4';
           } else {
-            dlUrl = d.videoUrl || d.videoUrlNoWatermark || d.download || d.url || d.hdplay || d.play;
+            dlUrl = d.videoUrlHD || d.hdplay || d.videoUrl || d.videoUrlNoWatermark || d.download || d.url || d.play;
             dlExt = 'mp4';
           }
 
@@ -328,6 +331,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
           title: result?.previewMeta?.title || baseTitle,
           artist: result?.previewMeta?.description || result?.author || '',
           coverUrl: previewImg || result?.previewMeta?.image || result?.cover || null,
+          isMuted: isMuted,
         };
 
         try {
@@ -635,10 +639,20 @@ const TikTokVideoTab = ({ muted, setMuted, downloading, onDownload, btnCls }) =>
       </span>
       <div className={`toggle ${muted ? 'on' : ''}`} onClick={() => setMuted(m => !m)} />
     </div>
-    <div className="action-row">
+    <div style={{ fontSize: '0.82rem', color: '#10b981', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <i className="fa-solid fa-circle-check" />
+      {t('tt_gallery_compatible')}
+    </div>
+    <div className="action-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       <button className={`btn ${btnCls}`} disabled={downloading}
-        onClick={() => onDownload({ isMuted: muted, audioOnly: false })}>
-        {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-video" /> {muted ? t('btn_muted') : t('btn_video')}</>}
+        onClick={() => onDownload({ quality: 'hd', isMuted: muted, audioOnly: false })}
+        style={{ flex: '1 1 180px' }}>
+        {downloading ? <span className="spinner" /> : <><i className="fa-solid fa-circle-play" /> {muted ? t('btn_hd_muted') : t('btn_hd_video')}</>}
+      </button>
+      <button className="btn btn-ghost" disabled={downloading}
+        onClick={() => onDownload({ quality: 'sd', isMuted: muted, audioOnly: false })}
+        style={{ flex: '1 1 140px' }}>
+        <i className="fa-solid fa-video" /> {muted ? t('btn_sd_muted') : t('btn_sd_video')}
       </button>
     </div>
   </div>

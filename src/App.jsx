@@ -436,7 +436,9 @@ function App() {
           setResult({
             status: isGallery ? 'picker' : 'ready',
             url: tiktokUrl,
-            downloadUrl: isGallery ? pickerItems[0]?.url : (d.videoUrl || d.download || d.video || d.play || null),
+            downloadUrl: isGallery ? pickerItems[0]?.url : (d.videoUrlHD || d.hdplay || d.videoUrl || d.download || d.video || d.play || null),
+            videoUrlHD: d.videoUrlHD || d.hdplay || d.videoUrl || null,
+            videoUrlSD: d.videoUrlSD || d.play || null,
             mediaType: isGallery ? 'image' : 'video',
             musicUrl: d.music || null,
             metadata: d.metadata || null,
