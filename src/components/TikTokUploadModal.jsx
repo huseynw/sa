@@ -448,7 +448,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <div className="tt-guide-video-wrapper">
                   <div className="tt-vertical-video-box">
                     <video
-                      src="https://github.com/huseynw/sa/releases/download/v1.0.0/tuto.mp4"
+                      src="/tuto.mp4"
                       controls
                       playsInline
                       preload="metadata"
