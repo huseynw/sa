@@ -27,7 +27,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
   const [file, setFile] = useState(null);
   const [meta, setMeta] = useState(null);
   const [metaLoading, setMetaLoading] = useState(false);
-  const [preset, setPreset] = useState('husevn'); // 'husevn' | 'faststart'
+  const [preset, setPreset] = useState('husevn'); // 'husevn' | 'standard'
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ percent: 0, stage: '' });
   const [result, setResult] = useState(null);
@@ -168,7 +168,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   )}
                 </div>
                 <p className="shortcut-subtitle">
-                  {t('tt_modal_sub', 'HUSEVN 120 FPS Method & FastStart Optimizer')}
+                  {t('tt_modal_sub', 'HUSEVN 120 FPS Method Optimizer')}
                 </p>
               </div>
             </div>
@@ -209,7 +209,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <p className="shortcut-desc">
                   {t(
                     'tt_modal_patcher_desc',
-                    'HUSEVN 120 FPS metodunu birbaşa cihazınızda tətbiq edir. Video kadrlarına toxunmur, ParsMazi / LuisAlves10 Timescale və FastStart mühərriki ilə TikTok-un 60/120 FPS keyfiyyət kanalını işə salır və shadowban riskini tam aradan qaldırır.'
+                    'HUSEVN 120 FPS metodunu birbaşa cihazınızda tətbiq edir. Video kadrlarına toxunmur, HUSEVN optimizasiya mühərriki ilə TikTok-un 60/120 FPS keyfiyyət kanalını işə salır və shadowban riskini tam aradan qaldırır.'
                   )}
                 </p>
 
@@ -330,7 +330,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       <label className="tt-preset-label">{t('tt_select_preset', 'Yüklənmə Metodu Rejimi:')}</label>
                       <div className="tt-preset-grid two-col">
                         <div
-                          className={`tt-preset-card ${preset === 'husevn' || preset === 'parsmazi' ? 'active' : ''}`}
+                          className={`tt-preset-card ${preset === 'husevn' ? 'active' : ''}`}
                           onClick={() => !processing && setPreset('husevn')}
                         >
                           <div className="tt-preset-header">
@@ -340,23 +340,23 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                           <p className="tt-preset-desc">
                             {t(
                               'tt_preset_husevn_desc',
-                              'HUSEVN metodu: Video kadrları və 60/120 FPS axıcılığı 100% qorunur. ParsMazi Timescale Scaling və FastStart ilə fayl təmiz saxlanılır, heç bir saxta audio olmadan TikTok-un keyfiyyət salması və shadowban əngəllənir.'
+                              'HUSEVN metodu: Video kadrları və 60/120 FPS axıcılığı 100% qorunur. Fayl daxili strukturu təmiz saxlanılır, heç bir saxta audio olmadan TikTok-un keyfiyyət salması və shadowban əngəllənir.'
                             )}
                           </p>
                         </div>
 
                         <div
-                          className={`tt-preset-card ${preset === 'faststart' ? 'active' : ''}`}
-                          onClick={() => !processing && setPreset('faststart')}
+                          className={`tt-preset-card ${preset === 'standard' ? 'active' : ''}`}
+                          onClick={() => !processing && setPreset('standard')}
                         >
                           <div className="tt-preset-header">
-                            <span className="tt-preset-badge green">FastStart</span>
-                            <span className="tt-preset-title">{t('tt_preset_faststart_title', 'Lossless FastStart')}</span>
+                            <span className="tt-preset-badge green">Standart</span>
+                            <span className="tt-preset-title">{t('tt_preset_standard_title', 'Standart Rejim')}</span>
                           </div>
                           <p className="tt-preset-desc">
                             {t(
-                              'tt_preset_faststart_desc',
-                              'Videonun daxili kadrlarına toxunmadan faylı veb və TikTok üçün anında açılan FastStart formatına keçirir və teqləyir.'
+                              'tt_preset_standard_desc',
+                              'Videonun daxili kadrlarına toxunmadan faylı veb və TikTok üçün anında açılan sürətli formata keçirir və teqləyir.'
                             )}
                           </p>
                         </div>
@@ -507,7 +507,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <div className="tt-step-content">
                     <h4>{t('tt_step2_title', 'Metod ilə Videonu Patch Edin')}</h4>
                     <p>
-                      Export olunmuş videonu saytımızın <strong>Brauzerdə Hazırla</strong> bölməsinə atın. Bu zaman fayl kadrlarına və müddətinə heç bir zərər dəymədən dərhal FastStart containerə çevrilir və <code>HUSEVN</code> encoder metadatası daxil edilir.
+                      Export olunmuş videonu saytımızın <strong>Brauzerdə Hazırla</strong> bölməsinə atın. Bu zaman fayl kadrlarına və müddətinə heç bir zərər dəymədən dərhal sürətli axın containerinə çevrilir və <code>HUSEVN</code> encoder metadatası daxil edilir.
                     </p>
                   </div>
                 </div>

@@ -1,15 +1,14 @@
 /**
  * mp4Patcher.js
- * In-browser binary MP4 patcher implementing the authentic Timescale Scaling
- * and FastStart architecture (ParsMazi / LuisAlves10 method).
+ * In-browser binary MP4 patcher implementing the HUSEVN 120 FPS Method.
  * Tag: HUSEVN
  *
  * 1. ZERO frame / duration cutting: Video samples, bitstream, resolution, and
  *    native framerate (60 FPS / 120 FPS) are 100% PRESERVED. The video track
  *    bitstream in mdat is completely untouched.
- * 2. Authentic Timescale Scaling (The ParsMazi / LuisAlves10 Bypass):
+ * 2. HUSEVN Container Optimization Engine:
  *    - TikTok's hardware encoder inspects: framerate = timescale / sample_delta.
- *    - When originalFps > 30, scales mvhd and mdhd timescale by (30 / originalFps).
+ *    - When originalFps > 30, adjusts mvhd and mdhd timescale by (30 / originalFps).
  *    - The sample deltas and actual frame count in mdat remain untouched.
  *    - TikTok reads 30 FPS and skips its aggressive 30 FPS downsampling filter,
  *      preserving 60/120 FPS smoothness on playback.
@@ -18,7 +17,7 @@
  *    - Absolutely ZERO dummy samples or fake audio tracks appended to mdat.
  *    - All original audio tracks and edit lists (edts) are preserved intact.
  *    - Standard ISO MP4 container passing all ByteDance BVC moderation checks.
- * 4. FastStart Optimization:
+ * 4. Stream Optimization:
  *    - Places 'moov' before 'mdat' ([ftyp] -> [moov] -> [mdat]) with accurate
  *      chunk offset remapping (stco / co64).
  * 5. Metadata Tagging:
@@ -337,7 +336,7 @@ export function inspectMp4(bytes) {
 
   const duration = videoTrack?.seconds || 0;
   const bitrate = duration ? (bytes.length * 8) / duration : 0;
-  const fastStart = Boolean(moov && mdats[0] && moov.start < mdats[0].start);
+  const isStreamReady = Boolean(moov && mdats[0] && moov.start < mdats[0].start);
 
   return {
     bytes,
@@ -349,7 +348,7 @@ export function inspectMp4(bytes) {
     videoTrack,
     audioTracks,
     audioTrack,
-    fastStart,
+    isStreamReady,
     duration,
     bitrate,
   };
@@ -403,7 +402,7 @@ function replaceChildBox(bytes, parent, targetStart, replacement) {
   return makeBox(parent.type, concat(parts));
 }
 
-// --- Timescale Scaling (ParsMazi / LuisAlves10 Bypass) ---
+// --- HUSEVN Optimization Engine ---
 
 /**
  * Patches the timescale in mvhd (Movie Header atom).
@@ -591,7 +590,7 @@ export async function probeMp4Metadata(fileOrBlob) {
       fps: analysis.videoTrack?.fps ? Math.round(analysis.videoTrack.fps * 100) / 100 : 0,
       duration: Math.round(analysis.duration * 10) / 10,
       bitrate: analysis.bitrate ? Math.round((analysis.bitrate / 1_000_000) * 10) / 10 : 0,
-      isFastStart: analysis.fastStart,
+      isStreamReady: analysis.isStreamReady,
       hasAudio: analysis.audioTracks.length > 0,
       size: fileOrBlob.size,
     };
@@ -602,10 +601,10 @@ export async function probeMp4Metadata(fileOrBlob) {
 
 /**
  * Main patch function.
- * Implements the authentic Timescale Scaling & FastStart architecture (ParsMazi / LuisAlves10).
+ * Implements the HUSEVN 120 FPS Studio upload architecture.
  * 
  * Preserves 100% lossless video quality, 0 frame drops, 0 video truncations,
- * keeps native 60/120 FPS bitstream in mdat untouched, scales timescale to bypass
+ * keeps native 60/120 FPS bitstream in mdat untouched, optimizes timing to bypass
  * TikTok downsampling, and guarantees zero shadowban triggers.
  */
 export async function patchMp4(fileOrBlob, options = {}, onProgress) {
@@ -621,19 +620,19 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
     throw new Error('Videoda video izi (vide) tapılmadı.');
   }
 
-  const preset = options.preset || 'husevn'; // 'husevn' (default) | 'faststart'
+  const preset = options.preset || 'husevn'; // 'husevn' (default) | 'standard'
   let scaleFactor = 1.0;
 
-  if (preset === 'husevn' || preset === 'parsmazi' || preset === 'studio') {
+  if (preset === 'husevn' || preset === 'studio') {
     const originalFps = analysis.videoTrack.fps || 0;
     if (originalFps > 30) {
       scaleFactor = 30 / originalFps;
       onProgress && onProgress({
         percent: 45,
-        stage: `Timescale tənzimlənir (${Math.round(originalFps)} FPS -> 30 FPS ekvivalenti)...`,
+        stage: `Axıcılıq rejimi tənzimlənir (${Math.round(originalFps)} FPS -> 30 FPS)...`,
       });
     } else {
-      onProgress && onProgress({ percent: 45, stage: 'Standart FastStart rejimi hazırlanır...' });
+      onProgress && onProgress({ percent: 45, stage: 'Standart axın rejimi hazırlanır...' });
     }
   }
 
@@ -642,7 +641,7 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
   const oldMdatPayloadLength = oldMdatPayloadEnd - oldMdatPayloadStart;
   const prefix = analysis.ftyp ? rawBox(bytes, analysis.ftyp) : new Uint8Array(0);
 
-  onProgress && onProgress({ percent: 60, stage: 'FastStart moov konteyneri hesablanır...' });
+  onProgress && onProgress({ percent: 60, stage: 'Veb axın konteyneri hesablanır...' });
 
   // Pass 1: Measure exact draftMoov size with placeholder offsets
   const placeholderContext = {
