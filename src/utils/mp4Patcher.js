@@ -21,6 +21,8 @@
  *    - Injects standard Apple iTunes metadata tag ('HUSEVN') into moov/udta.
  */
 
+import { BUNDLED_WORKER_CODE } from './methodWorkerCode.js';
+
 export const ENCODER_TAG = 'HUSEVN';
 export const COMMENT_TAG = 'HUSEVN';
 
@@ -556,20 +558,10 @@ export async function probeMp4Metadata(fileOrBlob) {
 }
 
 /**
- * Main patch function.
- * Implements the HUSEVN 120 FPS Studio upload architecture.
- * 
- * 1. 100% EXACT DURATION & SPEED: Video runtime and playback speed are preserved
- *    to the millisecond (zero slow-motion, zero duration doubling, 41s stays 41s).
- * 2. 100% LOSSLESS VIDEO & AUDIO: All video frames, native 60/120 FPS bitstream,
- *    and audio sync in mdat remain untouched.
- * 3. ZERO SHADOWBAN (is_nff_or_nr: 0): Clean standard-compliant ISO MP4 container
- *    passing all ByteDance BVC automated checks.
- * 4. STREAM OPTIMIZATION: Places moov at the head ([ftyp] -> [moov] -> [mdat])
- *    with precise stco/co64 chunk remapping for immediate TikTok Studio ingestion.
- * 5. METADATA: Injects HUSEVN tag into moov/udta.
+ * Native FastStart fallback patcher.
+ * Runs in pure JavaScript if the video doesn't have an AAC track or Web Workers are unsupported.
  */
-export async function patchMp4(fileOrBlob, options = {}, onProgress) {
+async function patchMp4NativeFastStart(fileOrBlob, options = {}, onProgress) {
   onProgress && onProgress({ percent: 10, stage: 'Fayl və MP4 strukturu oxunur...' });
 
   const buffer = await fileOrBlob.arrayBuffer();
@@ -594,7 +586,6 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
 
   onProgress && onProgress({ percent: 60, stage: 'Veb axın konteyneri hesablanır...' });
 
-  // Pass 1: Measure exact draftMoov size with placeholder offsets
   const placeholderContext = {
     placeholder: true,
     oldMdatPayloadStart,
@@ -604,12 +595,10 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
   };
   const draftMoov = rebuildMoov(bytes, analysis, placeholderContext, options);
 
-  // Large mdat check (64-bit size box if > 4GB)
   const isLargeMdat = (8 + oldMdatPayloadLength) > 0xFFFFFFFF;
   const mdatHeaderSize = isLargeMdat ? 16 : 8;
   const mdatTotalSize = mdatHeaderSize + oldMdatPayloadLength;
 
-  // Pass 2: Exact offset calculation
   const newMdatPayloadStart = prefix.length + draftMoov.length + mdatHeaderSize;
   const finalContext = {
     placeholder: false,
@@ -628,8 +617,6 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
 
   onProgress && onProgress({ percent: 90, stage: 'Təmiz və ban-sız MP4 faylı qurulur...' });
 
-  // Assembly: [prefix/ftyp] -> [moov] -> [mdat]
-  // ZERO dummy samples, ZERO corrupted audio tracks, 100% lossless mdat payload.
   const totalSize = prefix.length + moov.length + mdatTotalSize;
   const output = new Uint8Array(totalSize);
 
@@ -670,4 +657,138 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
     fps: analysis.videoTrack.fps,
     duration: analysis.duration,
   };
+}
+
+const LIVE_METHOD_WORKER_URL = 'https://parsmazi.com/parsmazi-method/optimizer.worker.js?v=20260926-timing-v1';
+
+async function fetchLiveWorkerScript() {
+  if (typeof fetch === 'function') {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const resp = await fetch(LIVE_METHOD_WORKER_URL, {
+        cache: 'no-cache',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (resp.ok) {
+        const text = await resp.text();
+        if (text && text.length > 5000) {
+          return text;
+        }
+      }
+    } catch (err) {
+      console.warn('Canlı ParsMazi mühərriki bağlantısında gecikmə/xəta, daxili mühərrikə keçilir:', err);
+    }
+  }
+  return BUNDLED_WORKER_CODE;
+}
+
+function runMethodWorker(workerScript, fileOrBlob, onProgress) {
+  return new Promise((resolve, reject) => {
+    let worker;
+    let workerUrl;
+
+    try {
+      const blob = new Blob([workerScript], { type: 'application/javascript' });
+      workerUrl = URL.createObjectURL(blob);
+      worker = new Worker(workerUrl);
+    } catch (err) {
+      if (workerUrl) URL.revokeObjectURL(workerUrl);
+      return reject(err);
+    }
+
+    const cleanup = () => {
+      try {
+        if (worker) worker.terminate();
+        if (workerUrl) URL.revokeObjectURL(workerUrl);
+      } catch {}
+    };
+
+    worker.onmessage = (e) => {
+      const msg = e.data || {};
+      if (msg.type === 'progress') {
+        const val = Math.max(0, Math.min(100, Number(msg.value) || 0));
+        onProgress && onProgress({
+          percent: Math.round(20 + val * 0.75),
+          stage: msg.label || 'Konteyner və axın optimallaşdırılır...',
+        });
+      } else if (msg.type === 'analyzed') {
+        const analysis = msg.analysis;
+        if (!analysis || !analysis.compatible || !analysis.audioPatchCompatible) {
+          cleanup();
+          return reject(new Error(analysis?.errors?.[0] || 'Fayl metod ilə birbaşa uyğunlaşmadı.'));
+        }
+        onProgress && onProgress({
+          percent: 30,
+          stage: 'Konteyner və audio axını qurulur...',
+        });
+        worker.postMessage({
+          type: 'process',
+          file: fileOrBlob,
+          options: { mode: 'parsmazi-method' },
+        });
+      } else if (msg.type === 'processed') {
+        cleanup();
+        resolve(msg);
+      } else if (msg.type === 'error') {
+        cleanup();
+        reject(new Error(msg.message || 'Worker prosesində xəta baş verdi.'));
+      }
+    };
+
+    worker.onerror = (err) => {
+      cleanup();
+      reject(new Error(err?.message || 'Worker icrası zamanı xəta.'));
+    };
+
+    onProgress && onProgress({ percent: 15, stage: 'Struktur analiz edilir...' });
+    worker.postMessage({ type: 'analyze', file: fileOrBlob });
+  });
+}
+
+/**
+ * Main patch function.
+ * 
+ * Silently runs the genuine 120 FPS Method background worker directly in the browser:
+ * - Fetches the live remote worker engine from parsmazi.com in the background (with local bundled fallback).
+ * - Exact audio track sample inflation (10x multiplier) + 0xFFFFFFFFFFFFFFFFn unknown duration.
+ * - Leaves video frames 100% untouched bit-for-bit lossless in mdat.
+ * - Bypasses TikTok Studio 30 FPS downsampler, eliminates shadowbans (is_nff_or_nr: 0).
+ * - Delivers the output named [filename]_HUSEVN.mp4 right from our site.
+ */
+export async function patchMp4(fileOrBlob, options = {}, onProgress) {
+  onProgress && onProgress({ percent: 10, stage: 'Optimizasiya mühərriki hazırlanır...' });
+
+  // 1. Try running via genuine method worker (fetched live or bundled)
+  if (typeof Worker !== 'undefined') {
+    try {
+      const workerScript = await fetchLiveWorkerScript();
+      const result = await runMethodWorker(workerScript, fileOrBlob, onProgress);
+      if (result && result.buffer) {
+        onProgress && onProgress({ percent: 100, stage: 'Tamamlandı!' });
+        const outBlob = new Blob([result.buffer], { type: 'video/mp4' });
+        const originalName = fileOrBlob.name || 'video';
+        const cleanBaseName = originalName.replace(/\.[^/.]+$/, '');
+        const outName = `${cleanBaseName}_HUSEVN.mp4`;
+
+        return {
+          blob: outBlob,
+          name: outName,
+          size: outBlob.size,
+          oldSize: fileOrBlob.size,
+          encoder: ENCODER_TAG,
+          method: 'HUSEVN 120 FPS Method',
+          fps: result.analysis?.video?.fps || 60,
+          duration: result.analysis?.duration || 0,
+          stats: result.stats,
+        };
+      }
+    } catch (workerErr) {
+      console.warn('Metod worker fallback-ə keçir:', workerErr);
+    }
+  }
+
+  // 2. Fallback: Pure JavaScript standard streaming FastStart patcher
+  return patchMp4NativeFastStart(fileOrBlob, options, onProgress);
 }
