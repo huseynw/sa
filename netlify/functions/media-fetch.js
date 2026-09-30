@@ -626,9 +626,19 @@ export const handler = async (event) => {
                   }
                 }
 
+                if (encoder && (encoder.includes('husevndownloader') || encoder.includes('husevn'))) {
+                  encoder = 'husevndownloader.netlify.app';
+                }
+                if (comment && (comment.includes('husevndownloader') || comment.includes('husevn'))) {
+                  comment = 'Patched by husevndownloader.netlify.app';
+                }
+
                 const udtaStr = buf.toString('utf8', udta.contentStart, udta.boxEnd);
                 if (!comment) {
-                  if (udtaStr.includes('Compressbase')) {
+                  if (udtaStr.includes('husevndownloader') || udtaStr.includes('husevn')) {
+                    const match = udtaStr.match(/Patched by husevndownloader(?:\.netlify\.app)?/i);
+                    comment = match ? match[0] : 'Patched by husevndownloader.netlify.app';
+                  } else if (udtaStr.includes('Compressbase')) {
                     const match = udtaStr.match(/Patched by Compressbase(?:\.com)?/i);
                     comment = match ? match[0] : 'Patched by Compressbase.com';
                   } else if (udtaStr.includes('Upload120')) {
@@ -645,12 +655,16 @@ export const handler = async (event) => {
                   }
                 }
                 if (!encoder) {
-                  const lavfMatch = udtaStr.match(/Lavf[0-9.]+/);
-                  if (lavfMatch) encoder = lavfMatch[0];
-                  else if (udtaStr.includes('CapCut')) encoder = 'CapCut';
-                  else if (udtaStr.includes('HandBrake')) encoder = 'HandBrake';
-                  else if (udtaStr.includes('Premiere')) encoder = 'Adobe Premiere';
-                  else if (udtaStr.includes('DaVinci')) encoder = 'DaVinci Resolve';
+                  if (udtaStr.includes('husevndownloader') || udtaStr.includes('husevn')) {
+                    encoder = 'husevndownloader.netlify.app';
+                  } else {
+                    const lavfMatch = udtaStr.match(/Lavf[0-9.]+/);
+                    if (lavfMatch) encoder = lavfMatch[0];
+                    else if (udtaStr.includes('CapCut')) encoder = 'CapCut';
+                    else if (udtaStr.includes('HandBrake')) encoder = 'HandBrake';
+                    else if (udtaStr.includes('Premiere')) encoder = 'Adobe Premiere';
+                    else if (udtaStr.includes('DaVinci')) encoder = 'DaVinci Resolve';
+                  }
                 }
 
                 method = comment || encoder || null;
@@ -658,7 +672,10 @@ export const handler = async (event) => {
 
               if (!method) {
                 const moovStr = buf.toString('utf8', moov.contentStart, moov.boxEnd);
-                if (moovStr.includes('Compressbase')) {
+                if (moovStr.includes('husevndownloader') || moovStr.includes('husevn')) {
+                  const match = moovStr.match(/Patched by husevndownloader(?:\.netlify\.app)?/i);
+                  method = match ? match[0] : 'Patched by husevndownloader.netlify.app';
+                } else if (moovStr.includes('Compressbase')) {
                   const match = moovStr.match(/Patched by Compressbase(?:\.com)?/i);
                   method = match ? match[0] : 'Patched by Compressbase.com';
                 } else if (moovStr.includes('Upload120')) {

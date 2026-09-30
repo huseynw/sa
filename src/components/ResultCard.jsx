@@ -912,14 +912,18 @@ const VideoMetadataPanel = ({ meta }) => {
       <div className="meta-analytics-grid">
         {items.map(item => {
           const isWide = item.id === 'uploadDate' || item.id === 'method';
+          const isHusevnMethod = item.id === 'method' && String(item.val).includes('husevndownloader');
           return (
-            <div key={item.id} className={`meta-metric-card ${isWide ? 'wide' : ''}`}>
+            <div key={item.id} className={`meta-metric-card ${isWide ? 'wide' : ''} ${isHusevnMethod ? 'method-husevn' : ''}`}>
               <div className="meta-metric-icon">
-                <i className={item.icon} />
+                <i className={isHusevnMethod ? 'fa-solid fa-bolt' : item.icon} />
               </div>
               <div className="meta-metric-info">
-                <span className="meta-metric-label">{item.label}</span>
-                <span className="meta-metric-value">{item.val}</span>
+                <span className="meta-metric-label">
+                  {item.label}
+                  {isHusevnMethod && <span className="method-verified-badge">HUSEVN</span>}
+                </span>
+                <span className={`meta-metric-value ${isHusevnMethod ? 'text-husevn-cyan' : ''}`}>{item.val}</span>
               </div>
             </div>
           );

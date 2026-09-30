@@ -4,6 +4,7 @@ import ResultCard from './components/ResultCard';
 import StatsPanel from './components/StatsPanel';
 import FeedbackForm from './components/FeedbackForm';
 import LyricsView from './components/LyricsView';
+import TikTokUploadModal from './components/TikTokUploadModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { detectCountryAndSetLanguage } from './i18n';
@@ -199,6 +200,7 @@ function App() {
   const [results,  setResults]  = useState({});
   const [loadings, setLoadings] = useState({});
   const [urlErrors, setUrlErrors] = useState({});
+  const [showUploadMethod, setShowUploadMethod] = useState(false);
 
   const [ytMode, setYtMode] = useState('link');
   const [searchQuery, setSearchQuery] = useState('');
@@ -572,7 +574,7 @@ function App() {
 
   return (
     <>
-      <Header />
+      <Header onOpenUploadMethod={() => setShowUploadMethod(true)} />
 
       <main>
         <motion.div
@@ -739,6 +741,28 @@ function App() {
                     )}
                   </form>
                 )}
+                {pid === 'tiktok' && (
+                  <div className="tt-upload-method-banner" onClick={() => setShowUploadMethod(true)}>
+                    <div className="tt-banner-left">
+                      <div className="tt-banner-icon">
+                        <i className="fa-brands fa-tiktok" />
+                      </div>
+                      <div className="tt-banner-text">
+                        <div className="tt-banner-title">
+                          <span>{t('tt_banner_title', 'TikTok Studio Upload Metodu')}</span>
+                          <span className="tt-banner-badge">60 / 120 FPS</span>
+                        </div>
+                        <p className="tt-banner-sub">
+                          {t('tt_banner_sub', 'Videonun keyfiyyətini qoru, 30 FPS həddini aş (Encoder: husevndownloader.netlify.app)')}
+                        </p>
+                      </div>
+                    </div>
+                    <button type="button" className="btn btn-banner-action">
+                      <i className="fa-solid fa-wand-magic-sparkles" />
+                      <span>{t('tt_banner_btn', 'Metodu Aç')}</span>
+                    </button>
+                  </div>
+                )}
                 {searchLoading && (
                   <div style={{ padding: '20px', textAlign: 'center' }}>
                     <span className="spinner" style={{ borderTopColor: 'var(--text2)' }} />
@@ -847,6 +871,11 @@ function App() {
           {t('stats_footer')}
         </div>
       </div>
+
+      <TikTokUploadModal
+        isOpen={showUploadMethod}
+        onClose={() => setShowUploadMethod(false)}
+      />
     </>
   );
 }

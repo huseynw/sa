@@ -2744,3 +2744,693 @@ main {
   border: 0;
 }
 
+/* ========================================================
+   TIKTOK UPLOAD METHOD (STUDIO ANTI-COMPRESSION) STYLES
+   ======================================================== */
+
+.btn-tt-method-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(105, 201, 208, 0.12);
+  border: 1px solid rgba(105, 201, 208, 0.3);
+  color: #69c9d0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 12px rgba(105, 201, 208, 0.15);
+}
+.btn-tt-method-header:hover {
+  background: rgba(105, 201, 208, 0.22);
+  border-color: #69c9d0;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(105, 201, 208, 0.35);
+}
+.btn-tt-method-header i {
+  font-size: 0.95rem;
+}
+
+/* Banner in TikTok platform tab */
+.tt-upload-method-banner {
+  margin-top: 14px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, rgba(105, 201, 208, 0.08), rgba(238, 29, 82, 0.06));
+  border: 1px solid rgba(105, 201, 208, 0.25);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+.tt-upload-method-banner:hover {
+  background: linear-gradient(135deg, rgba(105, 201, 208, 0.14), rgba(238, 29, 82, 0.1));
+  border-color: rgba(105, 201, 208, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3), 0 0 20px rgba(105, 201, 208, 0.2);
+}
+.tt-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tt-banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #111827, #1f2937);
+  border: 1px solid rgba(105, 201, 208, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: #69c9d0;
+  box-shadow: 0 0 12px rgba(105, 201, 208, 0.2);
+  flex-shrink: 0;
+}
+.tt-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tt-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+.tt-banner-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: rgba(105, 201, 208, 0.2);
+  border: 1px solid rgba(105, 201, 208, 0.4);
+  color: #69c9d0;
+  letter-spacing: 0.5px;
+}
+.tt-banner-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+.btn-banner-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #69c9d0, #00f2fe);
+  color: #060814;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(105, 201, 208, 0.35);
+  flex-shrink: 0;
+}
+.btn-banner-action:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(105, 201, 208, 0.5);
+}
+
+/* TikTok Upload Modal */
+.tt-upload-modal {
+  max-width: 580px;
+}
+.tt-modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tt-modal-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  border: 1px solid rgba(105, 201, 208, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #69c9d0;
+  box-shadow: 0 0 16px rgba(105, 201, 208, 0.25);
+  flex-shrink: 0;
+}
+.tt-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tt-method-pill {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(238, 29, 82, 0.15);
+  border: 1px solid rgba(238, 29, 82, 0.3);
+  color: #ff3b69;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Modal Tab Bar */
+.tt-modal-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.tt-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tt-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+.tt-tab-btn.active {
+  background: rgba(105, 201, 208, 0.12);
+  border-color: rgba(105, 201, 208, 0.3);
+  color: #69c9d0;
+  box-shadow: 0 0 10px rgba(105, 201, 208, 0.15);
+}
+
+/* Modal Body */
+.tt-modal-body {
+  padding: 20px;
+  max-height: calc(85vh - 140px);
+  overflow-y: auto;
+}
+
+/* Dropzone */
+.tt-dropzone {
+  border: 2px dashed rgba(105, 201, 208, 0.3);
+  border-radius: 16px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(105, 201, 208, 0.02);
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.tt-dropzone:hover, .tt-dropzone.dragover {
+  border-color: #69c9d0;
+  background: rgba(105, 201, 208, 0.08);
+  transform: scale(1.01);
+  box-shadow: 0 0 24px rgba(105, 201, 208, 0.2);
+}
+.tt-dropzone-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(105, 201, 208, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: #69c9d0;
+  margin-bottom: 12px;
+}
+.tt-dropzone h4 {
+  margin: 0 0 4px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+.tt-dropzone p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+.tt-dropzone-meta {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+.tt-dropzone-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* File Selected State */
+.tt-file-selected-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tt-file-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+.tt-file-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(105, 201, 208, 0.12);
+  color: #69c9d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.tt-file-details {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+}
+.tt-file-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tt-file-size {
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+.tt-file-remove {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+.tt-file-remove:hover {
+  color: #fff;
+}
+
+/* Preset Cards */
+.tt-presets-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tt-preset-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.tt-preset-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tt-preset-card {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tt-preset-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(105, 201, 208, 0.3);
+}
+.tt-preset-card.active {
+  background: rgba(105, 201, 208, 0.08);
+  border-color: #69c9d0;
+  box-shadow: 0 0 14px rgba(105, 201, 208, 0.15);
+}
+.tt-preset-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.tt-preset-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(105, 201, 208, 0.15);
+  border: 1px solid rgba(105, 201, 208, 0.3);
+  color: #69c9d0;
+}
+.tt-preset-badge.purple {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+.tt-preset-badge.green {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+.tt-preset-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+}
+.tt-preset-desc {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+/* Tag Preview */
+.tt-tag-preview-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  font-size: 0.76rem;
+}
+.tt-tag-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.tt-tag-key {
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tt-tag-val {
+  color: #69c9d0;
+  font-family: monospace;
+  font-weight: 600;
+}
+.text-green {
+  color: #4ade80 !important;
+}
+
+/* Progress bar */
+.tt-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tt-progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.tt-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #69c9d0, #00f2fe);
+  border-radius: 9999px;
+  transition: width 0.2s ease;
+  box-shadow: 0 0 12px rgba(105, 201, 208, 0.5);
+}
+.tt-progress-status {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+
+/* Success & Error */
+.tt-success-box {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 12px;
+}
+.tt-success-icon {
+  font-size: 1.5rem;
+  color: #4ade80;
+  flex-shrink: 0;
+}
+.tt-success-box h4 {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+  color: #4ade80;
+  font-weight: 700;
+}
+.tt-success-box p {
+  margin: 0 0 10px 0;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+.btn-download-again {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #22c55e;
+  color: #060814;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.btn-download-again:hover {
+  background: #16a34a;
+}
+.tt-error-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+  color: #f87171;
+  font-size: 0.8rem;
+}
+
+/* Button Primary */
+.btn-tt-primary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #69c9d0, #00f2fe);
+  color: #060814;
+  font-size: 0.92rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(105, 201, 208, 0.35);
+}
+.btn-tt-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(105, 201, 208, 0.5);
+}
+.btn-tt-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* FFmpeg Commands Tab */
+.tt-ffmpeg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tt-cmd-box {
+  background: #060913;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tt-cmd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.tt-cmd-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.btn-cmd-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-cmd-copy:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.tt-cmd-code {
+  margin: 0;
+  padding: 12px;
+  font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #69c9d0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Guide Section */
+.tt-guide-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tt-guide-step {
+  display: flex;
+  gap: 14px;
+}
+.tt-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(105, 201, 208, 0.15);
+  border: 1px solid rgba(105, 201, 208, 0.35);
+  color: #69c9d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.tt-step-content {
+  flex: 1;
+}
+.tt-step-content h4 {
+  margin: 0 0 6px 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+}
+.tt-step-content p {
+  margin: 0 0 8px 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+.tt-guide-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+}
+.tt-guide-list strong {
+  color: #69c9d0;
+}
+.tt-guide-callout {
+  padding: 10px 12px;
+  background: rgba(105, 201, 208, 0.05);
+  border: 1px solid rgba(105, 201, 208, 0.2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tt-guide-callout p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+}
+.tt-guide-callout a {
+  color: #69c9d0;
+  text-decoration: underline;
+}
+
+/* ResultCard Metadata Highlight for husevndownloader */
+.meta-metric-card.method-husevn {
+  border-color: rgba(105, 201, 208, 0.45) !important;
+  background: linear-gradient(135deg, rgba(105, 201, 208, 0.12), rgba(12, 18, 42, 0.4)) !important;
+  box-shadow: 0 0 16px rgba(105, 201, 208, 0.2) !important;
+}
+.method-verified-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(105, 201, 208, 0.2);
+  border: 1px solid rgba(105, 201, 208, 0.4);
+  color: #69c9d0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+.text-husevn-cyan {
+  color: #69c9d0 !important;
+  font-weight: 700 !important;
+}
+
+@media (max-width: 640px) {
+  .btn-tt-method-header span {
+    display: none;
+  }
+  .btn-tt-method-header {
+    padding: 6px 10px;
+  }
+  .tt-upload-method-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .btn-banner-action {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
