@@ -209,7 +209,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                 <p className="shortcut-desc">
                   {t(
                     'tt_modal_patcher_desc',
-                    'HUSEVN 120 FPS metodunu (husevndownloader.netlify.app) birbaşa cihazınızda tətbiq edir. Video kadrlarına və sürətinə toxunmur, audio sample cədvəli və mvhd optimizasiyası ilə TikTok-un ən yüksək keyfiyyət kanalını işə salır.'
+                    'HUSEVN 120 FPS metodunu (HUSEVN) birbaşa cihazınızda tətbiq edir. Video kadrlarına və sürətinə toxunmur, audio sample cədvəli və mvhd optimizasiyası ilə TikTok-un ən yüksək keyfiyyət kanalını işə salır.'
                   )}
                 </p>
 
@@ -340,7 +340,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                           <p className="tt-preset-desc">
                             {t(
                               'tt_preset_husevn_desc',
-                              'HUSEVN metodu (husevndownloader.netlify.app): Video kadrları və 60/120 FPS axıcılığı 100% toxunulmaz qalır (kəsilmə və ya yavaşlama olmur). Audio sample cədvəli 10× genişləndirilir və mvhd naməlum edilir ki, TikTok videonu sıxmadan ən yüksək keyfiyyətlə emal etsin.'
+                              'HUSEVN metodu (HUSEVN): Video kadrları və 60/120 FPS axıcılığı 100% toxunulmaz qalır (kəsilmə və ya yavaşlama olmur). Audio sample cədvəli 10× genişləndirilir və mvhd naməlum edilir ki, TikTok videonu sıxmadan ən yüksək keyfiyyətlə emal etsin.'
                             )}
                           </p>
                         </div>
@@ -507,7 +507,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <div className="tt-step-content">
                     <h4>{t('tt_step2_title', 'Metod ilə Videonu Patch Edin')}</h4>
                     <p>
-                      Export olunmuş videonu saytımızın <strong>Brauzerdə Hazırla</strong> bölməsinə atın. Bu zaman fayl kadrlarına və müddətinə heç bir zərər dəymədən dərhal FastStart containerə çevrilir və <code>husevndownloader.netlify.app</code> encoder metadatası daxil edilir.
+                      Export olunmuş videonu saytımızın <strong>Brauzerdə Hazırla</strong> bölməsinə atın. Bu zaman fayl kadrlarına və müddətinə heç bir zərər dəymədən dərhal FastStart containerə çevrilir və <code>HUSEVN</code> encoder metadatası daxil edilir.
                     </p>
                   </div>
                 </div>
@@ -535,7 +535,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                   <div className="tt-step-content">
                     <h4>{t('tt_step4_title', 'Keyfiyyətin və Metodun Təsdiqi')}</h4>
                     <p>
-                      Saytımızda TikTok videosunun linkini axtarışa verdikdə <strong>Yüklənmə Metodu</strong> sütununda avtomatik olaraq <code>husevndownloader.netlify.app</code> görünəcək və video orijinal 60 FPS axıcılığında olacaq!
+                      Saytımızda TikTok videosunun linkini axtarışa verdikdə <strong>Yüklənmə Metodu</strong> sütununda avtomatik olaraq <code>HUSEVN</code> görünəcək və video orijinal 60 FPS axıcılığında olacaq!
                     </p>
                   </div>
                 </div>

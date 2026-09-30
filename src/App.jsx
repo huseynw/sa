@@ -833,7 +833,7 @@ function App() {
                           )}
                         </div>
                         <p className="tt-banner-sub">
-                          {t('tt_banner_sub', 'Videonun keyfiyyətini qoru, 30 FPS həddini aş (Encoder: husevndownloader.netlify.app)')}
+                          {t('tt_banner_sub', 'Videonun keyfiyyətini qoru, 30 FPS həddini aş (Encoder: HUSEVN)')}
                         </p>
                       </div>
                     </div>

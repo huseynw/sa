@@ -633,18 +633,17 @@ export const handler = async (event) => {
                   }
                 }
 
-                if (encoder && (encoder.includes('husevndownloader') || encoder.includes('husevn'))) {
-                  encoder = 'husevndownloader.netlify.app';
+                if (encoder && (encoder.includes('husevndownloader') || encoder.toLowerCase().includes('husevn'))) {
+                  encoder = 'HUSEVN';
                 }
-                if (comment && (comment.includes('husevndownloader') || comment.includes('husevn'))) {
-                  comment = 'Patched by husevndownloader.netlify.app';
+                if (comment && (comment.includes('husevndownloader') || comment.toLowerCase().includes('husevn'))) {
+                  comment = 'HUSEVN';
                 }
 
                 const udtaStr = buf.toString('utf8', udta.contentStart, udta.boxEnd);
                 if (!comment) {
-                  if (udtaStr.includes('husevndownloader') || udtaStr.includes('husevn')) {
-                    const match = udtaStr.match(/Patched by husevndownloader(?:\.netlify\.app)?/i);
-                    comment = match ? match[0] : 'Patched by husevndownloader.netlify.app';
+                  if (udtaStr.includes('husevndownloader') || udtaStr.toLowerCase().includes('husevn')) {
+                    comment = 'HUSEVN';
                   } else if (udtaStr.includes('Compressbase')) {
                     const match = udtaStr.match(/Patched by Compressbase(?:\.com)?/i);
                     comment = match ? match[0] : 'Patched by Compressbase.com';
@@ -662,8 +661,8 @@ export const handler = async (event) => {
                   }
                 }
                 if (!encoder) {
-                  if (udtaStr.includes('husevndownloader') || udtaStr.includes('husevn')) {
-                    encoder = 'husevndownloader.netlify.app';
+                  if (udtaStr.includes('husevndownloader') || udtaStr.toLowerCase().includes('husevn')) {
+                    encoder = 'HUSEVN';
                   } else {
                     const lavfMatch = udtaStr.match(/Lavf[0-9.]+/);
                     if (lavfMatch) encoder = lavfMatch[0];
@@ -679,9 +678,8 @@ export const handler = async (event) => {
 
               if (!method) {
                 const moovStr = buf.toString('utf8', moov.contentStart, moov.boxEnd);
-                if (moovStr.includes('husevndownloader') || moovStr.includes('husevn')) {
-                  const match = moovStr.match(/Patched by husevndownloader(?:\.netlify\.app)?/i);
-                  method = match ? match[0] : 'Patched by husevndownloader.netlify.app';
+                if (moovStr.includes('husevndownloader') || moovStr.toLowerCase().includes('husevn')) {
+                  method = 'HUSEVN';
                 } else if (moovStr.includes('Compressbase')) {
                   const match = moovStr.match(/Patched by Compressbase(?:\.com)?/i);
                   method = match ? match[0] : 'Patched by Compressbase.com';

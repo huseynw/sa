@@ -23,8 +23,8 @@
  *      in standard Apple iTunes metadata format inside moov/udta.
  */
 
-export const ENCODER_TAG = 'husevndownloader.netlify.app';
-export const COMMENT_TAG = 'TikTok Method by husevndownloader.netlify.app';
+export const ENCODER_TAG = 'HUSEVN';
+export const COMMENT_TAG = 'HUSEVN';
 
 const METHOD_SAMPLE = new Uint8Array([0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]);
 const MVHD_SURE_BILINMIYOR = 0xffffffffffffffffn;
@@ -994,7 +994,7 @@ export async function patchMp4(fileOrBlob, options = {}, onProgress) {
   const outBlob = new Blob([output], { type: 'video/mp4' });
   const originalName = fileOrBlob.name || 'video';
   const cleanBaseName = originalName.replace(/\.[^/.]+$/, '');
-  const outName = `${cleanBaseName}_husevndownloader.mp4`;
+  const outName = `${cleanBaseName}_HUSEVN.mp4`;
 
   return {
     blob: outBlob,
