@@ -11,11 +11,11 @@ const PLATFORM_LABELS = {
   tiktok: '🎵 TikTok',
   instagram: '📸 Instagram',
   youtube: '▶️ YouTube',
-  spotify: '🎧 Spotify',
-  soundcloud: '☁️ SoundCloud',
   pinterest: '📌 Pinterest',
-  general: '🌐 Ümumi / Sayt',
-  other: '➕ Digər'
+  facebook: '👥 Facebook',
+  tiktok_method: '⚡ TikTok 120 FPS Metod',
+  lyrics: '🎶 Mahnı Sözləri (Lyrics)',
+  general: '🌐 Ümumi / Sayt'
 };
 
 const CONTACT_LABELS = {

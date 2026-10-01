@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PLATFORMS = [
-  { id: 'tiktok', name: 'TikTok', icon: 'fa-brands fa-tiktok', color: '#00f2fe' },
-  { id: 'instagram', name: 'Instagram', icon: 'fa-brands fa-instagram', color: '#E1306C' },
-  { id: 'youtube', name: 'YouTube', icon: 'fa-brands fa-youtube', color: '#FF0000' },
-  { id: 'spotify', name: 'Spotify', icon: 'fa-brands fa-spotify', color: '#1DB954' },
-  { id: 'soundcloud', name: 'SoundCloud', icon: 'fa-brands fa-soundcloud', color: '#ff5500' },
-  { id: 'pinterest', name: 'Pinterest', icon: 'fa-brands fa-pinterest', color: '#E60023' },
+  { id: 'tiktok', name: 'TikTok', icon: 'fa-brands fa-tiktok', color: '#69c9d0' },
+  { id: 'instagram', name: 'Instagram', icon: 'fa-brands fa-instagram', color: '#dd2a7b' },
+  { id: 'youtube', name: 'YouTube', icon: 'fa-brands fa-youtube', color: '#ff0000' },
+  { id: 'pinterest', name: 'Pinterest', icon: 'fa-brands fa-pinterest', color: '#e60023' },
+  { id: 'facebook', name: 'Facebook', icon: 'fa-brands fa-facebook', color: '#1877f2' },
+  { id: 'tiktok_method', name: '120 FPS Metod', icon: 'fa-solid fa-bolt-lightning', color: '#00f2fe' },
+  { id: 'lyrics', name: 'Mahnı Sözləri', i18nKey: 'tab_lyrics', icon: 'fa-solid fa-music', color: '#8b5cf6' },
   { id: 'general', name: 'Ümumi / Sayt', i18nKey: 'feedback_platform_general', icon: 'fa-solid fa-globe', color: '#818cf8' },
-  { id: 'other', name: 'Digər', i18nKey: 'feedback_platform_other', icon: 'fa-solid fa-ellipsis', color: '#94a3b8' },
 ];
 
 const CONTACT_METHODS = [
@@ -21,7 +21,6 @@ const CONTACT_METHODS = [
     color: '#229ED9',
     placeholderKey: 'feedback_contact_ph_telegram',
     fallbackPlaceholder: 'məsələn: @istifadeci_adi',
-    prefix: '@',
   },
   {
     id: 'whatsapp',
@@ -30,7 +29,6 @@ const CONTACT_METHODS = [
     color: '#25D366',
     placeholderKey: 'feedback_contact_ph_whatsapp',
     fallbackPlaceholder: 'məsələn: +994 50 123 45 67',
-    prefix: '+',
   },
   {
     id: 'instagram',
@@ -39,7 +37,6 @@ const CONTACT_METHODS = [
     color: '#E1306C',
     placeholderKey: 'feedback_contact_ph_instagram',
     fallbackPlaceholder: 'məsələn: @istifadeci_adi',
-    prefix: '@',
   },
   {
     id: 'tiktok',
@@ -48,7 +45,6 @@ const CONTACT_METHODS = [
     color: '#00f2fe',
     placeholderKey: 'feedback_contact_ph_tiktok',
     fallbackPlaceholder: 'məsələn: @istifadeci_adi',
-    prefix: '@',
   },
   {
     id: 'other',
@@ -57,7 +53,6 @@ const CONTACT_METHODS = [
     color: '#94a3b8',
     placeholderKey: 'feedback_contact_ph_other',
     fallbackPlaceholder: 'Nömrə, email və ya profil linki',
-    prefix: '',
   },
 ];
 
