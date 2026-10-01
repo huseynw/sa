@@ -3422,16 +3422,38 @@ main {
   align-items: center;
   justify-content: center;
 }
-.tt-file-input-overlay {
+.tt-file-input-hidden {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 0.1px;
+  height: 0.1px;
   opacity: 0;
-  cursor: pointer;
-  z-index: 10;
-  -webkit-appearance: none;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+.btn-tt-select-file {
+  margin-top: 14px;
+  background: linear-gradient(135deg, rgba(105, 201, 208, 0.22), rgba(0, 242, 254, 0.1));
+  border: 1px solid rgba(105, 201, 208, 0.45);
+  color: #69c9d0;
+  padding: 10px 22px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(105, 201, 208, 0.15);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+.tt-dropzone:hover .btn-tt-select-file {
+  background: linear-gradient(135deg, rgba(105, 201, 208, 0.35), rgba(0, 242, 254, 0.2));
+  border-color: #69c9d0;
+  color: #fff;
+  transform: translateY(-1px);
 }
 .tt-dropzone:hover, .tt-dropzone.dragover {
   border-color: #69c9d0;

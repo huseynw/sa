@@ -67,21 +67,29 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
     // Detect if the file is a video (handles iOS Safari Photos picker quirks where type can be empty or video/quicktime)
     const name = (selectedFile.name || '').toLowerCase();
     const type = (selectedFile.type || '').toLowerCase();
-    const isVideoExt = /\.(mp4|mov|m4v|qt|webm|mkv|avi|3gp)$/i.test(name);
-    const isVideoMime = type.startsWith('video/') || type.includes('quicktime');
-    const isLikelyVideo = isVideoMime || isVideoExt || (type === '' && selectedFile.size > 0) || type === 'application/octet-stream';
-    const isImage = type.startsWith('image/') && !type.includes('quicktime');
+    const isExplicitImage = type.startsWith('image/') && !type.includes('quicktime') && (name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.webp') || name.endsWith('.gif') || name.endsWith('.heic'));
 
-    if (isImage || !isLikelyVideo) {
+    if (isExplicitImage) {
       setError(t('tt_modal_err_mp4_only', 'Zəhmət olmasa video faylı seçin (MP4 / MOV).'));
       return;
     }
 
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
+    if (selectedFile.size === 0) {
+      setError(t('tt_modal_err_generic', 'Fayl boşdur və ya oxuna bilmir.'));
+      return;
     }
-    const newPreviewUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(newPreviewUrl);
+
+    if (previewUrl) {
+      try { URL.revokeObjectURL(previewUrl); } catch {}
+    }
+
+    let newPreviewUrl = null;
+    try {
+      newPreviewUrl = URL.createObjectURL(selectedFile);
+      setPreviewUrl(newPreviewUrl);
+    } catch (e) {
+      console.warn('Preview URL creation failed:', e);
+    }
 
     setError('');
     setResult(null);
@@ -89,7 +97,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
     setMeta(null);
     setMetaLoading(true);
 
-    // 1. Binary MP4 header probe
+    // 1. Binary MP4 header probe (non-blocking)
     probeMp4Metadata(selectedFile)
       .then((m) => {
         if (m) {
@@ -102,36 +110,37 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
       });
 
     // 2. HTML5 video metadata probe fallback (iOS Safari safe)
-    try {
-      const v = document.createElement('video');
-      v.preload = 'metadata';
-      v.muted = true;
-      v.playsInline = true;
-      v.setAttribute('playsinline', '');
-      v.setAttribute('webkit-playsinline', '');
+    if (newPreviewUrl) {
+      try {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.muted = true;
+        v.playsInline = true;
+        v.setAttribute('playsinline', '');
+        v.setAttribute('webkit-playsinline', '');
 
-      v.onloadedmetadata = () => {
-        setMeta((prev) => ({
-          ...prev,
-          width: prev?.width || v.videoWidth,
-          height: prev?.height || v.videoHeight,
-          duration: prev?.duration || Math.round(v.duration * 10) / 10,
-        }));
+        v.onloadedmetadata = () => {
+          setMeta((prev) => ({
+            ...prev,
+            width: prev?.width || v.videoWidth,
+            height: prev?.height || v.videoHeight,
+            duration: prev?.duration || Math.round(v.duration * 10) / 10,
+          }));
+          setMetaLoading(false);
+        };
+        v.onerror = () => {
+          setMetaLoading(false);
+        };
+        v.src = newPreviewUrl;
+      } catch {
         setMetaLoading(false);
-      };
-      v.onerror = () => {
-        setMetaLoading(false);
-      };
-      v.src = newPreviewUrl;
-      v.load();
-
-      // Fallback timeout to ensure spinner never stays stuck on iOS
-      setTimeout(() => {
-        setMetaLoading(false);
-      }, 3000);
-    } catch {
-      setMetaLoading(false);
+      }
     }
+
+    // Fallback timeout to ensure spinner never stays stuck on iOS
+    setTimeout(() => {
+      setMetaLoading(false);
+    }, 2500);
   };
 
   const handleDrop = (e) => {
@@ -287,22 +296,21 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                         <span>{error}</span>
                       </div>
                     )}
-                    <div
+                    <label
+                      htmlFor="tt-file-input"
                       className={`tt-dropzone ${isDragging ? 'dragover' : ''}`}
                       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                       onDragLeave={() => setIsDragging(false)}
                       onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
                     >
                       <input
+                        id="tt-file-input"
                         ref={fileInputRef}
                         type="file"
-                        accept="video/*,video/mp4,video/quicktime,.mp4,.mov,.m4v"
-                        className="tt-file-input-overlay"
-                        onClick={(e) => { e.target.value = ''; }}
+                        accept="video/*"
+                        className="tt-file-input-hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          e.target.value = '';
                           if (f) handleFileSelect(f);
                         }}
                       />
@@ -311,7 +319,11 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       </div>
                       <h4>{t('tt_drop_title', 'MP4 Videonuzu Bura Atın')}</h4>
                       <p>{t('tt_drop_hint', 'və ya cihazdan fayl seçmək üçün klikləyin')}</p>
-                    </div>
+                      <span className="btn btn-tt-select-file">
+                        <i className="fa-solid fa-photo-film" />
+                        <span>{t('tt_btn_select_file', 'Video Seç')}</span>
+                      </span>
+                    </label>
                   </div>
                 ) : (
                   <div className="tt-file-selected-box">
@@ -327,8 +339,11 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                         type="button"
                         className="btn btn-icon tt-file-remove"
                         onClick={() => {
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = '';
+                          }
                           if (previewUrl) {
-                            URL.revokeObjectURL(previewUrl);
+                            try { URL.revokeObjectURL(previewUrl); } catch {}
                             setPreviewUrl(null);
                           }
                           setFile(null);
