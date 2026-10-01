@@ -357,25 +357,20 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       </button>
                     </div>
 
-                    {/* Video Preview */}
-                    {(result?.url || previewUrl) && (
+                    {/* Video Preview (Initial Uploaded Video Only) */}
+                    {previewUrl && (
                       <div className="tt-preview-container">
                         <div className="tt-preview-box">
                           <video
-                            key={result?.url || previewUrl}
-                            src={result?.url || previewUrl}
+                            src={previewUrl}
                             controls
                             playsInline
                             preload="metadata"
                             className="tt-preview-video"
                           />
-                          <div className={`tt-preview-badge ${result?.url ? 'patched' : ''}`}>
-                            <i className={result?.url ? 'fa-solid fa-bolt-lightning text-green' : 'fa-solid fa-circle-play'} />
-                            <span>
-                              {result?.url
-                                ? t('tt_preview_patched', 'Hazırlanmış Video (120 FPS)')
-                                : t('tt_preview_badge', 'Video Önizləmə')}
-                            </span>
+                          <div className="tt-preview-badge">
+                            <i className="fa-solid fa-circle-play" />
+                            <span>{t('tt_preview_badge', 'Video Önizləmə')}</span>
                           </div>
                         </div>
                       </div>
