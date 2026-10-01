@@ -45,6 +45,11 @@ function tutoVideoPlugin() {
           fs.copyFileSync('tuto.mp4', 'public/tuto.mp4');
         } catch {}
       }
+      if (fs.existsSync('tuto2.mp4') && !fs.existsSync('public/tuto2.mp4')) {
+        try {
+          fs.copyFileSync('tuto2.mp4', 'public/tuto2.mp4');
+        } catch {}
+      }
     },
   };
 }

@@ -104,7 +104,7 @@ export default function ShortcutModal({ isOpen, onClose, shortcutUrl = DEFAULT_S
                 style={{ fontSize: '0.85rem' }}
               >
                 <i className={`fa-solid ${showGuide ? 'fa-chevron-up' : 'fa-circle-play'}`} />
-                {showGuide ? 'Tutorialı gizlə' : 'Video Tutorial'}
+                {showGuide ? t('shortcut_hide_guide', 'Tutorialı gizlə') : t('shortcut_show_guide', 'Video Tutorial')}
               </button>
             </div>
 
@@ -115,16 +115,51 @@ export default function ShortcutModal({ isOpen, onClose, shortcutUrl = DEFAULT_S
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
               >
-                <h4>🎬 Kəstirmə Video Tutorialı:</h4>
-                <div className="shortcut-video-wrapper">
-                  <iframe
-                    src="https://www.youtube.com/embed/i2aDnvtk92I?si=xOr1v63iepvyCebJ"
-                    title="YouTube video player"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                  />
+                <h4>🎬 {t('shortcut_video_title', 'Kəstirmə Video Tutorialı:')}</h4>
+                <div className="shortcut-guide-video-wrapper">
+                  <div className="shortcut-vertical-video-box">
+                    <video
+                      src="/tuto2.mp4"
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="shortcut-vertical-video-player"
+                      onLoadedMetadata={(e) => {
+                        e.currentTarget.style.display = 'block';
+                        const ph = e.currentTarget.parentElement?.querySelector('.shortcut-video-placeholder');
+                        if (ph) ph.style.display = 'none';
+                      }}
+                      onCanPlay={(e) => {
+                        e.currentTarget.style.display = 'block';
+                        const ph = e.currentTarget.parentElement?.querySelector('.shortcut-video-placeholder');
+                        if (ph) ph.style.display = 'none';
+                      }}
+                      onLoadedData={(e) => {
+                        e.currentTarget.style.display = 'block';
+                        const ph = e.currentTarget.parentElement?.querySelector('.shortcut-video-placeholder');
+                        if (ph) ph.style.display = 'none';
+                      }}
+                      onError={(e) => {
+                        if (!e.currentTarget.dataset.retried) {
+                          e.currentTarget.dataset.retried = 'true';
+                          e.currentTarget.src = 'https://github.com/huseynw/sa/releases/download/v1.0.1/tuto2.mp4';
+                          return;
+                        }
+                        e.currentTarget.style.display = 'none';
+                        const ph = e.currentTarget.parentElement?.querySelector('.shortcut-video-placeholder');
+                        if (ph) ph.style.display = 'flex';
+                      }}
+                    />
+                    <div className="shortcut-video-placeholder">
+                      <div className="shortcut-placeholder-icon">
+                        <i className="fa-solid fa-play" />
+                      </div>
+                      <span className="shortcut-placeholder-title">tuto2.mp4</span>
+                      <span className="shortcut-placeholder-text">
+                        {t('shortcut_video_placeholder_hint', 'Video yükləndikdə avtomatik burada göstəriləcək')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
