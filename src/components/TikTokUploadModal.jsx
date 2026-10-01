@@ -25,6 +25,7 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
 
   // Patcher states
   const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [meta, setMeta] = useState(null);
   const [metaLoading, setMetaLoading] = useState(false);
   const [preset, setPreset] = useState('husevn'); // 'husevn' | 'faststart'
@@ -34,6 +35,29 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
   const [error, setError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Clean up object URL when component unmounts or previewUrl changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  // Clean up states when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+      setFile(null);
+      setResult(null);
+      setMeta(null);
+      setError('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -52,6 +76,12 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
       setError(t('tt_modal_err_mp4_only', 'Zəhmət olmasa video faylı seçin (MP4 / MOV).'));
       return;
     }
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    const newPreviewUrl = URL.createObjectURL(selectedFile);
+    setPreviewUrl(newPreviewUrl);
 
     setError('');
     setResult(null);
@@ -73,20 +103,12 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
 
     // 2. HTML5 video metadata probe fallback (iOS Safari safe)
     try {
-      const url = URL.createObjectURL(selectedFile);
       const v = document.createElement('video');
       v.preload = 'metadata';
       v.muted = true;
       v.playsInline = true;
       v.setAttribute('playsinline', '');
       v.setAttribute('webkit-playsinline', '');
-
-      let cleaned = false;
-      const cleanup = () => {
-        if (cleaned) return;
-        cleaned = true;
-        try { URL.revokeObjectURL(url); } catch {}
-      };
 
       v.onloadedmetadata = () => {
         setMeta((prev) => ({
@@ -96,19 +118,16 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
           duration: prev?.duration || Math.round(v.duration * 10) / 10,
         }));
         setMetaLoading(false);
-        cleanup();
       };
       v.onerror = () => {
         setMetaLoading(false);
-        cleanup();
       };
-      v.src = url;
+      v.src = newPreviewUrl;
       v.load();
 
       // Fallback timeout to ensure spinner never stays stuck on iOS
       setTimeout(() => {
         setMetaLoading(false);
-        cleanup();
       }, 3000);
     } catch {
       setMetaLoading(false);
@@ -307,13 +326,45 @@ export default function TikTokUploadModal({ isOpen, onClose }) {
                       <button
                         type="button"
                         className="btn btn-icon tt-file-remove"
-                        onClick={() => { setFile(null); setResult(null); setMeta(null); }}
+                        onClick={() => {
+                          if (previewUrl) {
+                            URL.revokeObjectURL(previewUrl);
+                            setPreviewUrl(null);
+                          }
+                          setFile(null);
+                          setResult(null);
+                          setMeta(null);
+                        }}
                         disabled={processing}
                         title="Faylı dəyiş"
                       >
                         <i className="fa-solid fa-arrow-rotate-left" />
                       </button>
                     </div>
+
+                    {/* Video Preview */}
+                    {(result?.url || previewUrl) && (
+                      <div className="tt-preview-container">
+                        <div className="tt-preview-box">
+                          <video
+                            key={result?.url || previewUrl}
+                            src={result?.url || previewUrl}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="tt-preview-video"
+                          />
+                          <div className={`tt-preview-badge ${result?.url ? 'patched' : ''}`}>
+                            <i className={result?.url ? 'fa-solid fa-bolt-lightning text-green' : 'fa-solid fa-circle-play'} />
+                            <span>
+                              {result?.url
+                                ? t('tt_preview_patched', 'Hazırlanmış Video (120 FPS)')
+                                : t('tt_preview_badge', 'Video Önizləmə')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Diagnostics Card */}
                     {(meta || metaLoading) && (
