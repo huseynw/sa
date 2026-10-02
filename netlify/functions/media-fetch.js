@@ -393,7 +393,7 @@ export const handler = async (event) => {
           const tikwmData = await tikwmRes.json();
           if (tikwmData?.data) {
             const d = tikwmData.data;
-            const fileSize = d.hd_size || d.size || 0;
+            const fileSize = d.size || d.hd_size || 0;
             const dur = d.duration || 0;
             const bitrateMbps = (fileSize && dur) ? ((fileSize * 8) / dur / 1000000).toFixed(2) : null;
             const views = d.play_count || 0;
@@ -408,10 +408,10 @@ export const handler = async (event) => {
               data: {
                 title: d.title || '',
                 cover: d.cover || '',
-                videoUrl: d.hdplay || d.play || '',
-                videoUrlHD: d.hdplay || d.play || '',
+                videoUrl: d.play || d.hdplay || '',
+                videoUrlHD: d.play || d.hdplay || '',
                 videoUrlSD: d.play || '',
-                videoUrlNoWatermark: d.hdplay || d.play || '',
+                videoUrlNoWatermark: d.play || d.hdplay || '',
                 music: d.music || '',
                 images: Array.isArray(d.images) ? d.images : [],
                 metadata: {
@@ -443,7 +443,7 @@ export const handler = async (event) => {
             data = await meganGet('/api/download/tiktok', { url });
             if (data?.data) {
               const mv = data.data.videoUrl || data.data.download || data.data.play || '';
-              if (!data.data.videoUrlHD) data.data.videoUrlHD = data.data.hdplay || mv;
+              if (!data.data.videoUrlHD) data.data.videoUrlHD = data.data.play || mv;
               if (!data.data.videoUrlSD) data.data.videoUrlSD = data.data.play || mv;
             }
           } catch (e) {

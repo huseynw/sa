@@ -526,7 +526,7 @@ export const handler = async (event) => {
         const tikwmData = await tikwmRes.json();
         if (tikwmData?.data) {
           const d = tikwmData.data;
-          videoUrl = d.hdplay || d.play || '';
+          videoUrl = d.play || d.hdplay || '';
           musicUrl = d.music || d.music_info?.play || '';
           if (d.title) title = d.title;
           if (Array.isArray(d.images) && d.images.length > 0) {
@@ -552,7 +552,7 @@ export const handler = async (event) => {
           const tikwmData = await tikwmRes.json();
           if (tikwmData?.data) {
             const d = tikwmData.data;
-            videoUrl = d.hdplay || d.play || '';
+            videoUrl = d.play || d.hdplay || '';
             musicUrl = d.music || d.music_info?.play || '';
             if (d.title) title = d.title;
             if (Array.isArray(d.images) && d.images.length > 0) {

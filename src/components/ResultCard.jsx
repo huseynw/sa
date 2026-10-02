@@ -221,7 +221,7 @@ const ResultCard = ({ result, url, platform: forcedPlatform }) => {
             dlUrl = d.videoUrlSD || d.play || d.videoUrl || d.download || d.url;
             dlExt = 'mp4';
           } else {
-            dlUrl = d.videoUrlHD || d.hdplay || d.videoUrl || d.videoUrlNoWatermark || d.download || d.url || d.play;
+            dlUrl = d.videoUrlHD || d.play || d.videoUrl || d.videoUrlNoWatermark || d.download || d.url;
             dlExt = 'mp4';
           }
 

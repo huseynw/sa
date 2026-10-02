@@ -385,6 +385,17 @@ export function sanitizeMp4Buffer(arrayBuffer, { isMuted = false } = {}) {
       });
     }
 
+    // Always disable secondary audio tracks to prevent double-audio/chorus on iOS/QuickTime
+    if (audioTrackCount > 1) {
+      for (const info of trakMeta) {
+        if (info.handler === 'soun' && info.isSecondaryAudio && info.tkhd) {
+          bytes[info.tkhd.offset + info.tkhd.headerSize + 1] = 0;
+          bytes[info.tkhd.offset + info.tkhd.headerSize + 2] = 0;
+          bytes[info.tkhd.offset + info.tkhd.headerSize + 3] = 0;
+        }
+      }
+    }
+
     const effectiveDurSec = videoDurSec > 0 ? videoDurSec : maxDurSec;
     const isMvhdBroken = (
       rawMvhdDur <= 0 ||
