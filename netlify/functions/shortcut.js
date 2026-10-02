@@ -68,9 +68,7 @@ async function recordShortcutDownload(platform) {
 
 async function successResponse(data) {
   if (data.platform) {
-    try {
-      await recordShortcutDownload(data.platform);
-    } catch {}
+    recordShortcutDownload(data.platform).catch(() => {});
   }
 
   const rawTitle = data.title || 'Media';
@@ -131,12 +129,98 @@ function buildPhotosDict(images = []) {
 function cleanUrl(rawUrl) {
   if (!rawUrl) return '';
   let u = rawUrl.trim();
-  try {
-    u = decodeURIComponent(u);
-  } catch {}
+  for (let i = 0; i < 3; i++) {
+    try {
+      const decoded = decodeURIComponent(u);
+      if (decoded === u) break;
+      u = decoded;
+    } catch {
+      break;
+    }
+  }
   const match = u.match(/https?:\/\/[^\s"'<>]+/i);
   if (match) u = match[0];
-  return u.trim();
+  return u.replace(/[),.;]+$/, '').trim();
+}
+
+async function resolveTikTokUrl(rawUrl) {
+  if (!rawUrl) return rawUrl;
+  let currentUrl = rawUrl.trim();
+
+  // If already standard full URL with video or photo ID
+  const directMatch = currentUrl.match(/https?:\/\/(?:www\.|m\.)?tiktok\.com\/@([^\/]+)\/(video|photo)\/(\d+)/i);
+  if (directMatch) {
+    return `https://www.tiktok.com/@${directMatch[1]}/${directMatch[2]}/${directMatch[3]}`;
+  }
+
+  // If short link or needs redirect
+  const isShort = /(?:vm|vt)\.tiktok\.com|tiktok\.com\/(?:t\/|@[^\/]+\/?$|[a-zA-Z0-9_-]+\/?$)/i.test(currentUrl);
+  if (!isShort) return currentUrl;
+
+  try {
+    for (let hop = 0; hop < 5; hop++) {
+      const res = await fetch(currentUrl, {
+        method: 'GET',
+        redirect: 'manual',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        signal: AbortSignal.timeout(6000),
+      });
+
+      const loc = res.headers.get('location');
+      if (loc) {
+        // Check for app custom scheme e.g. snssdk1180://aweme/detail/123456789
+        const schemeMatch = loc.match(/(?:detail|video|aweme\/detail|item_id=|\/v\/)(\d{15,22})/i);
+        if (schemeMatch && schemeMatch[1]) {
+          return `https://www.tiktok.com/@tiktok/video/${schemeMatch[1]}`;
+        }
+
+        if (loc.startsWith('http://') || loc.startsWith('https://')) {
+          const locMatch = loc.match(/https?:\/\/(?:www\.|m\.)?tiktok\.com\/@([^\/]+)\/(video|photo)\/(\d+)/i);
+          if (locMatch) {
+            return `https://www.tiktok.com/@${locMatch[1]}/${locMatch[2]}/${locMatch[3]}`;
+          }
+          const idMatch = loc.match(/\/(\d{15,22})/);
+          if (idMatch && !loc.includes('sellerId') && !loc.includes('shop')) {
+            return `https://www.tiktok.com/@tiktok/video/${idMatch[1]}`;
+          }
+          try {
+            const parsed = new URL(loc);
+            if (parsed.pathname === '/' || parsed.pathname === '') break;
+          } catch {}
+          currentUrl = loc;
+          continue;
+        }
+      }
+
+      // Check HTML for canonical or og:url
+      const html = await res.text();
+      const ogMatch = html.match(/<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i) ||
+                      html.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
+      if (ogMatch && ogMatch[1]) {
+        const canonical = ogMatch[1];
+        const cMatch = canonical.match(/https?:\/\/(?:www\.|m\.)?tiktok\.com\/@([^\/]+)\/(video|photo)\/(\d+)/i);
+        if (cMatch) {
+          return `https://www.tiktok.com/@${cMatch[1]}/${cMatch[2]}/${cMatch[3]}`;
+        }
+      }
+
+      const bodyIdMatch = html.match(/["'](?:video|item|aweme)?Id["']\s*:\s*["'](\d{15,22})["']/i) ||
+                          html.match(/\/video\/(\d{15,22})/i);
+      if (bodyIdMatch && bodyIdMatch[1]) {
+        return `https://www.tiktok.com/@tiktok/video/${bodyIdMatch[1]}`;
+      }
+
+      break;
+    }
+  } catch (err) {
+    console.warn('[Shortcut] resolveTikTokUrl error:', err.message);
+  }
+
+  return currentUrl;
 }
 
 function cleanInstagramUrl(rawUrl) {
@@ -426,66 +510,92 @@ export const handler = async (event) => {
       let images = [];
       let title = 'TikTok Media';
 
-      let targetUrl = inputUrl;
-      if (targetUrl.includes('vm.tiktok.com') || targetUrl.includes('vt.tiktok.com') || targetUrl.includes('/t/')) {
-        try {
-          const res = await fetch(targetUrl, {
-            method: 'HEAD',
-            redirect: 'follow',
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-            },
-            signal: AbortSignal.timeout(3500),
-          });
-          if (res.url && res.url !== targetUrl) {
-            targetUrl = res.url.split('?')[0];
-          }
-        } catch {}
-      }
+      const targetUrl = await resolveTikTokUrl(inputUrl);
 
+      // 1. Try TikWM (fast, HD quality, extracts photo albums & music)
       try {
         const tikwmRes = await fetch('https://www.tikwm.com/api/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          },
           body: `url=${encodeURIComponent(targetUrl)}&hd=1`,
-          signal: AbortSignal.timeout(7000),
+          signal: AbortSignal.timeout(8000),
         });
         const tikwmData = await tikwmRes.json();
         if (tikwmData?.data) {
-          if (tikwmData.data.play) videoUrl = tikwmData.data.play;
-          if (tikwmData.data.music) musicUrl = tikwmData.data.music;
-          if (tikwmData.data.title) title = tikwmData.data.title;
-          if (Array.isArray(tikwmData.data.images) && tikwmData.data.images.length > 0) {
-            images = tikwmData.data.images;
+          const d = tikwmData.data;
+          videoUrl = d.hdplay || d.play || '';
+          musicUrl = d.music || d.music_info?.play || '';
+          if (d.title) title = d.title;
+          if (Array.isArray(d.images) && d.images.length > 0) {
+            images = d.images;
           }
         }
       } catch (e) {
         console.warn('[Shortcut] TikTok TikWM error:', e.message);
       }
 
+      // If TikWM failed with resolved URL and it differs from inputUrl, retry with inputUrl
+      if (!videoUrl && images.length === 0 && targetUrl !== inputUrl) {
+        try {
+          const tikwmRes = await fetch('https://www.tikwm.com/api/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            },
+            body: `url=${encodeURIComponent(inputUrl)}&hd=1`,
+            signal: AbortSignal.timeout(6000),
+          });
+          const tikwmData = await tikwmRes.json();
+          if (tikwmData?.data) {
+            const d = tikwmData.data;
+            videoUrl = d.hdplay || d.play || '';
+            musicUrl = d.music || d.music_info?.play || '';
+            if (d.title) title = d.title;
+            if (Array.isArray(d.images) && d.images.length > 0) {
+              images = d.images;
+            }
+          }
+        } catch {}
+      }
+
+      // 2. Megan API fallback
       if (!videoUrl && images.length === 0) {
         try {
-          const data = await meganGet('/api/download/tiktok', { url: targetUrl }, 15000);
-          if (!videoUrl) {
+          const queryUrl = targetUrl || inputUrl;
+          const data = await meganGet('/api/download/tiktok', { url: queryUrl }, 12000);
+          if (data?.data) {
             videoUrl =
-              data?.data?.videoNoWatermarkProxyUrl ||
-              data?.data?.videoProxyUrl ||
-              data?.data?.videoUrlNoWatermark ||
-              data?.data?.videoUrl ||
+              data.data.videoUrlNoWatermark ||
+              data.data.videoUrl ||
+              data.data.videoNoWatermarkProxyUrl ||
+              data.data.videoProxyUrl ||
               '';
-          }
-          if (!musicUrl && data?.data?.music) musicUrl = data.data.music;
-          if (!title && data?.data?.title) title = data.data.title;
-          if (images.length === 0 && Array.isArray(data?.data?.images) && data.data.images.length > 0) {
-            images = data.data.images;
+            if (data.data.title) title = data.data.title;
+            if (Array.isArray(data.data.images) && data.data.images.length > 0) {
+              images = data.data.images;
+            }
           }
         } catch (err) {
           console.warn('[Shortcut] TikTok Megan error:', err.message);
         }
       }
 
-      if (!musicUrl && videoUrl) {
-        musicUrl = videoUrl;
+      // 3. Audio fallback
+      if (!musicUrl) {
+        try {
+          const queryUrl = targetUrl || inputUrl;
+          const aData = await meganGet('/api/download/tiktok/audio', { url: queryUrl }, 8000);
+          if (aData?.data?.audioUrl) {
+            musicUrl = aData.data.audioUrl;
+          }
+        } catch {}
+        if (!musicUrl && videoUrl) {
+          musicUrl = videoUrl;
+        }
       }
 
       if (images.length > 0) {
